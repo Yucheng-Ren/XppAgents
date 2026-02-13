@@ -1,0 +1,15 @@
+{
+  "name": "xpp-code-review-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard server for X++ code review results",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --watch",
+    "build": "cd frontend && npm run build",
+    "install:frontend": "cd frontend && npm install",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "keywords": ["x++", "code-review", "dashboard"],
+  "license": "MIT"
+}
