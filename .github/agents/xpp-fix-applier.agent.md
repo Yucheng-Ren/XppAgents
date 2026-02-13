@@ -86,7 +86,22 @@ This sets `applied: true` and `appliedAt` on each fix in `.tmp/accepted-fixes.js
 - The dashboard shows them as "Applied to source"
 - The next run of this agent will skip them automatically
 
-## Step 5: Report Results
+## Step 5: Remove Applied Issues from Code Review Result
+
+After marking fixes as applied, remove the corresponding issues from `.tmp/code-review-result.json` so the dashboard no longer shows them:
+
+1. Read `.tmp/code-review-result.json` using the `read` tool.
+2. For each successfully applied fix, find the matching issue in the `files` array by matching:
+   - `file` (the file/class name)
+   - `title` (the issue title)
+   - `location` (the issue location, if present)
+3. Remove the matched issue from that file entry's `issues` array.
+4. If a file entry has no remaining `issues`, `strengths`, or `recommendations`, remove the entire file entry from the `files` array.
+5. Write the updated JSON back to `.tmp/code-review-result.json` using the `edit` tool (replace the entire file content).
+
+This keeps the review dashboard in sync — applied fixes disappear from the issue list automatically.
+
+## Step 6: Report Results
 
 After applying fixes, provide a summary:
 
@@ -97,6 +112,7 @@ After applying fixes, provide a summary:
 Also inform the user:
 - How many fixes were applied successfully
 - How many were skipped and why
+- How many issues were removed from the code review result
 - Remind them to rebuild and test the solution
 
 ## Important Rules

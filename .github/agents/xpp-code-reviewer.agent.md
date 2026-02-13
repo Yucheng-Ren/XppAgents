@@ -200,6 +200,12 @@ The JSON file uses a **multi-file** structure. Each reviewed file gets its own e
 
 After saving the JSON file, inform the user that `.tmp/code-review-result.json` has been saved and they can view the dashboard at `http://localhost:3000` (start the server with `npm start` from the CodeReview folder if not already running). Refreshing the browser will pick up the latest data.
 
+**Clean up accepted fixes**: After saving the new review JSON, clear `.tmp/accepted-fixes.json` by either:
+- Sending a DELETE request: `curl -X DELETE http://localhost:3000/api/accepted-fixes`
+- Or directly overwriting the file with `{"fixes":[]}` if the server is not running.
+
+This ensures stale accepted fixes from a previous review cycle don't carry over into the new review. The user will accept fresh fixes from the new review results on the dashboard.
+
 Edge Cases to Handle:
 - Asynchronous code and batch processing patterns
 - Form-level vs table-level logic placement
