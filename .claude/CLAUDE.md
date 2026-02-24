@@ -13,7 +13,7 @@
 - One tack per subagent for focused execution
 
 ### 3. Self-Improvement Loop
-- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- After ANY correction from the user: update `knowledge/lessons.md` with the pattern
 - Write rules for yourself that prevent the same mistake
 - Ruthlessly iterate on these lessons until mistake rate drops
 - Review lessons at session start for relevant project
@@ -38,15 +38,30 @@
 
 ## Task Management
 
-1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+1. **Plan First**: Write plan with checkable items (use todo list tool or inline)
 2. **Verify Plan**: Check in before starting implementation
 3. **Track Progress**: Mark items complete as you go
 4. **Explain Changes**: High-level summary at each step
-5. **Document Results**: Add review section to `tasks/todo.md`
-6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
+5. **Document Results**: Add findings to relevant `knowledge/` files
+6. **Capture Lessons**: Update `knowledge/lessons.md` after corrections
 
 ## Core Principles
 
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
 - **Minimat Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+
+## X++ Test Runner
+
+This project has a working CLI test runner for X++ SysTests. Full docs: `knowledge/xpp-test-runner.md`.
+
+**Quick usage:**
+```powershell
+.\scripts\Run-XppTests.ps1 -TestClasses "TestClassName"
+```
+
+- Uses `scripts/SysTestLauncher.exe` → `SysTestConsole.17.0.exe` under the hood
+- Results written to `.tmp/test-results.xml` (SysTestListenerXML format)
+- Exit code 0 = all passed, 1 = failures
+- After writing or modifying X++ test classes, **run the tests** to verify correctness
+- Use `/run-tests <TestClassName>` slash command for guided test execution

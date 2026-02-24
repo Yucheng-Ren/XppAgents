@@ -265,107 +265,13 @@ AxTableField: Email  (references Email table's RecId)
 
 **Rule**: When a table field is a foreign key referencing another table's `RecId`, the field name should NOT have the `RecId` suffix. Use the related table or entity name directly (e.g., `Email` not `EmailRecId`, `PurchOrder` not `PurchOrderRecId`). The `RecId` suffix is misleading — it exposes an implementation detail. The standard D365 convention uses descriptive names that reflect the relationship.
 
-## Use specific legal entity in test
-
-We can add [SysTestCaseDataDependency('USMF')] this tag at the top of the test class to use a specific legal entity. But it's not mandatory to do so.
-
 ## Conventions
 
 * A blank line should be added for every `return` statement 
 * A blank line should be added **before** every `select` / `while select` query statement
-* A blank line should be added **before** every `this.assert*` / `this.assertEquals` / `this.assertNotEqual` line (i.e., before the first assert after non-assert code; consecutive asserts on the same logical check can stay together)
-* Same logic code can stay close, but not packed everything togather
+* Same logic code can stay close, but not packed everything together
 * Repeated parts should be extracted to a method or even a class
-* Parameter of a method should starts with an underscore for example `public void add(int _num1, int _num2)`
-
-## Test methods should follow 3 step pattern
-
-When writing test cases, we usually follow the 3 steps pattern for setup, execute and validation. The code is structured as:
-
-```
-// Arrange
-// Act
-// Assert
-```
-
-Or:
-
-```
-// Given
-// When
-// Then
-```
-
-**Formatting rules**:
-- There should be a blank line **before** each section marker (except when it immediately follows the opening brace `{`).
-- There should be **no** blank line between the marker and the code under it.
-- Within each section (especially `// Assert`), keep code **readable** by adding blank lines between logically distinct groups:
-  - Separate record/row lookups from cell lookups and assertions.
-  - Keep each "find cell → assert" pair together, then add a blank line before the next pair.
-  - Group related statements; don't pack unrelated lines together wall-to-wall.
-
-**Example** — simple test (Act + Assert only):
-```xpp
-[SysTestMethod]
-public void testEmailStored()
-{
-    // Act
-    RecId actionPlanRecId = parser.parse(this.getCompleteActionPlanJson());
-
-    // Assert
-    PurchCopilotGenActionPlan actionPlanTable;
-    select firstonly actionPlanTable
-        where actionPlanTable.RecId == actionPlanRecId;
-
-    this.assertEquals(emailStaging.RecId, actionPlanTable.Email, 'Email should match the staging record');
-}
-```
-
-**Example** — full Arrange / Act / Assert:
-```xpp
-[SysTestMethod]
-public void testEmptyActionPlanArray()
-{
-    // Arrange
-    str jsonString = strFmt('{"emailId": "%1", "actionPlan": [], "summary": "Empty plan", "issues": "None"}', TestEmailId);
-
-    // Act
-    RecId actionPlanRecId = parser.parse(jsonString);
-
-    // Assert
-    PurchCopilotGenActionPlan actionPlanTable;
-    select firstonly actionPlanTable
-        where actionPlanTable.RecId == actionPlanRecId;
-
-    this.assertNotEqual(0, actionPlanTable.RecId, 'ActionPlan should be created');
-    this.assertEquals('Empty plan', actionPlanTable.Summary);
-    this.assertEquals(0, this.countPlanActions(actionPlanRecId), 'No PlanActions should be created');
-}
-```
-
-**Example** — readable Assert with multiple find-then-assert pairs:
-```xpp
-[SysTestMethod]
-public void testChangeDetectedRowHasExtractedValues()
-{
-    // Act
-    RecId actionPlanRecId = parser.parse(this.getSimpleHeaderActionJson());
-
-    // Assert
-    var actionInstance = PurchCopilotGenActionInstance::findByActionPlanId(actionPlanRecId);
-    PurchCopilotGenTableRow changeDetectedRow = this.findHeaderRow(actionInstance.RecId, PurchCopilotGenRowType::ChangeDetected);
-
-    PurchCopilotGenTableCell dateCell = this.findCellByFieldName(changeDetectedRow.RecId, headerTable.RecId, FieldConfirmedDeliveryDate);
-    this.assertEquals(mkDate(12, 1, 2026), dateCell.DateValue, 'ChangeDetected row should have extracted date value');
-
-    PurchCopilotGenTableCell intentCell = this.findCellByFieldName(changeDetectedRow.RecId, headerTable.RecId, FieldIntent);
-    this.assertEquals(TestIntent, intentCell.StringValue, 'ChangeDetected row should have extracted intent value');
-}
-```
-
-**Rule**: Every `[SysTestMethod]` must use the AAA pattern. If there is no explicit arrange step, start with `// Act`. Omit `// Arrange` only when setup is handled entirely by `setUp()`. Within each section, group related statements and use blank lines to separate logical blocks for readability — never pack all lines together wall-to-wall.
-
----
+* Parameter of a method should start with an underscore, for example `public void add(int _num1, int _num2)`
 
 ## Data Structure Selection
 
