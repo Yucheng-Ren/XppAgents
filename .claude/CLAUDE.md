@@ -13,7 +13,7 @@
 - One tack per subagent for focused execution
 
 ### 3. Self-Improvement Loop
-- After ANY correction from the user: update `knowledge/lessons.md` with the pattern
+- After ANY correction from the user: update `.claude/skills/run-tests/lessons.md` with the pattern
 - Write rules for yourself that prevent the same mistake
 - Ruthlessly iterate on these lessons until mistake rate drops
 - Review lessons at session start for relevant project
@@ -42,8 +42,8 @@
 2. **Verify Plan**: Check in before starting implementation
 3. **Track Progress**: Mark items complete as you go
 4. **Explain Changes**: High-level summary at each step
-5. **Document Results**: Add findings to relevant `knowledge/` files
-6. **Capture Lessons**: Update `knowledge/lessons.md` after corrections
+5. **Document Results**: Add findings to relevant `.claude/skills/` files
+6. **Capture Lessons**: Update `.claude/skills/run-tests/lessons.md` after corrections
 
 ## Core Principles
 
@@ -53,7 +53,7 @@
 
 ## X++ Test Runner
 
-This project has a working CLI test runner for X++ SysTests. Full docs: `knowledge/xpp-test-runner.md`.
+This project has a working CLI test runner for X++ SysTests. Full docs in the `/run-tests` skill (`.claude/skills/run-tests/`).
 
 **Quick usage:**
 ```powershell
@@ -64,4 +64,16 @@ This project has a working CLI test runner for X++ SysTests. Full docs: `knowled
 - Results written to `.tmp/test-results.xml` (SysTestListenerXML format)
 - Exit code 0 = all passed, 1 = failures
 - After writing or modifying X++ test classes, **run the tests** to verify correctness
-- Use `/run-tests <TestClassName>` slash command for guided test execution
+- Use `/run-tests <TestClassName>` skill for guided test execution
+
+## Skills
+
+All domain knowledge lives in `.claude/skills/` as Claude Code skills:
+
+| Skill | Type | Description |
+|-------|------|-------------|
+| `run-tests` | Task (invokable) | Run X++ tests via `/run-tests <ClassName>` |
+| `xpp-patterns` | Reference (auto) | X++ coding patterns and review rules |
+| `xpp-test-patterns` | Reference (auto) | X++ test writing patterns (AAA, naming, setup) |
+| `xpp-solution-paths` | Reference (auto) | Solution/source path resolution and caching |
+| `less-vrtt` | Reference (auto) | LESS styles and VRTT for extensible controls |

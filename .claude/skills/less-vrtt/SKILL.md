@@ -1,6 +1,12 @@
+---
+name: less-vrtt
+description: LESS and VRTT for D365 extensible controls. Covers building LESS styles, creating VRTT tests, and the difference between application and platform extensible controls.
+user-invocable: false
+---
+
 # LESS and VRTT for extensible controls
 
-​​With the Platform split, LESS and VRTT for extensible controls and extended styles has changed.​
+With the Platform split, LESS and VRTT for extensible controls and extended styles has changed.
 
 ## Application extensible controls
 
@@ -20,7 +26,7 @@ VRTT tests for application controls should be written and placed in the  `%inetr
 
 To run the VRTT tests, you will need to build the `ExtensibleControlStyles` directory. Again this directory requires that the `%inetroot%\Source\Kernel\browser\` folder had been built (or the result of the build is present in the drop folder). To build, go this directory and run `build retail debug`.
 
--  `GetPlatform -BuildType Debug` (Only need to run once per deploy)​
+-  `GetPlatform -BuildType Debug` (Only need to run once per deploy)
 -  `cd %inetroot%\Source\Staging\Application\Source\ExtensibleControlStyles\`
 -  `msbuild ExtensibleControlStyles.csproj*`
 -  `vrtt.bat`
@@ -28,14 +34,14 @@ To run the VRTT tests, you will need to build the `ExtensibleControlStyles` dire
 ## Platform extensible controls
 Platform extensible controls can now be treated similarly to Application extensible controls. The directions are the same as above with no GetPlatform needed since you're in the platform. In general, replace
 
-    ​​%inetroot%\Source\Staging\Application\Source\ExtensibleControlStyles\
+    %inetroot%\Source\Staging\Application\Source\ExtensibleControlStyles\
 
-​with
+with
 
-    ​%inetroot%\Source\Staging\FoundationExtensibleControlStyles​\
+    %inetroot%\Source\Staging\FoundationExtensibleControlStyles\
 
 in the steps. 
 
-##Courses on LESS
+## Courses on LESS
 A short overview: http://lesscss.org/
 A 2-hr course: https://app.pluralsight.com/library/courses/less-getting-started/table-of-contents

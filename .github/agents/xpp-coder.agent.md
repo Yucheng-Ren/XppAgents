@@ -21,14 +21,14 @@ You can:
 
 ## Step 1: Gather Paths from User (MANDATORY — do this FIRST)
 
-Follow the instructions in `knowledge/xpp-solution-paths.md` to resolve the solution path and source code path (check `.env.json` cache first — only ask the user if not cached). Then parse the `.rnrproj` file and locate source files. Read relevant source files for context before writing or modifying code.
+Follow the instructions in `.claude/skills/xpp-solution-paths/SKILL.md` to resolve the solution path and source code path (check `.env.json` cache first — only ask the user if not cached). Then parse the `.rnrproj` file and locate source files. Read relevant source files for context before writing or modifying code.
 
 **Solution context**: Check if `.tmp/solution-summary.md` exists at the workspace root. If it exists, read it first — it contains a pre-analyzed map of the entire solution (table relationships, class architecture, form structure). Use it to understand the codebase before making changes. If it does NOT exist, stop and tell the user:
 > No solution summary found. Please run `@xpp-solution-analyzer` first to generate the solution summary, then come back to me.
 
 ## X++ Knowledge Base
 
-Before writing or modifying any code, read all files in the `knowledge/` folder at the workspace root. These files contain X++ patterns, anti-patterns, and coding rules that you MUST follow when generating code. All code you produce must comply with the patterns defined there.
+Before writing or modifying any code, read the skill files in `.claude/skills/`. These files contain X++ patterns, anti-patterns, and coding rules that you MUST follow when generating code. All code you produce must comply with the patterns defined there.
 
 ## Step 2: Understand the Task
 

@@ -50,7 +50,7 @@ You are an X++ code fix applier. Your job is to read accepted code review fixes 
 
 ## Step 2: Gather Paths and Locate Source Files
 
-Follow the instructions in `knowledge/xpp-solution-paths.md` to resolve the solution path and source code path (check `.env.json` cache first — only ask the user if not cached). Then parse the `.rnrproj` file and locate source files.
+Follow the instructions in `.claude/skills/xpp-solution-paths/SKILL.md` to resolve the solution path and source code path (check `.env.json` cache first — only ask the user if not cached). Then parse the `.rnrproj` file and locate source files.
 
 Then, for each accepted fix, use the `file` field to identify which class/table/form the fix belongs to, and locate the corresponding source file. Read the source file content before applying changes.
 

@@ -1,3 +1,9 @@
+---
+name: xpp-patterns
+description: X++ code review patterns and rules for D365 Finance and Operations. Covers transaction scoping, set-based operations, CoC extensions, error handling, naming conventions, and data structure selection. Use when writing, reviewing, or modifying X++ code.
+user-invocable: false
+---
+
 # X++ Code Review Patterns & Rules
 
 Use the patterns and rules below as your reference when reviewing code. Flag violations as issues and suggest the correct pattern. This is a living document — add new entries at the bottom.

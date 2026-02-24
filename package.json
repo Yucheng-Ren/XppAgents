@@ -10,6 +10,13 @@
     "install:frontend": "cd frontend && npm install",
     "dev:frontend": "cd frontend && npm run dev"
   },
-  "keywords": ["x++", "code-review", "dashboard"],
-  "license": "MIT"
+  "keywords": [
+    "x++",
+    "code-review",
+    "dashboard"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "pdf-parse": "^2.4.5"
+  }
 }

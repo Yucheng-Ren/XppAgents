@@ -21,16 +21,16 @@ You can:
 
 ## Step 1: Gather Paths from User (MANDATORY — do this FIRST)
 
-Follow the instructions in `knowledge/xpp-solution-paths.md` to resolve the solution path and source code path (check `.env.json` cache first — only ask the user if not cached). Then parse the `.rnrproj` file and locate source files.
+Follow the instructions in `.claude/skills/xpp-solution-paths/SKILL.md` to resolve the solution path and source code path (check `.env.json` cache first — only ask the user if not cached). Then parse the `.rnrproj` file and locate source files.
 
 **Solution context**: Check if `.tmp/solution-summary.md` exists at the workspace root. If it exists, read it first — it contains a pre-analyzed map of the entire solution (table relationships, class architecture, form structure). Use it to understand the codebase before writing tests. If it does NOT exist, stop and tell the user:
 > No solution summary found. Please run `@xpp-solution-analyzer` first to generate the solution summary, then come back to me.
 
 ## X++ Knowledge Base
 
-Before writing any tests, read **all** files in the `knowledge/` folder at the workspace root. Pay special attention to:
-- `knowledge/xpp-test-patterns.md` — test-specific patterns, AAA structure, naming conventions, assertion rules.
-- `knowledge/xpp-patterns.md` — general X++ patterns and conventions that your test code must also follow.
+Before writing any tests, read the skill files in `.claude/skills/`. Pay special attention to:
+- `.claude/skills/xpp-test-patterns/SKILL.md` — test-specific patterns, AAA structure, naming conventions, assertion rules. For comprehensive examples, also read `.claude/skills/xpp-test-patterns/reference.md`.
+- `.claude/skills/xpp-patterns/SKILL.md` — general X++ patterns and conventions that your test code must also follow.
 
 All test code you produce must comply with the patterns defined in these files.
 
@@ -58,7 +58,7 @@ This gives the user a chance to add or adjust scenarios before you write the cod
 
 ### Test Class Structure
 
-Follow the structure defined in `knowledge/xpp-test-patterns.md`:
+Follow the structure defined in `.claude/skills/xpp-test-patterns/SKILL.md`:
 
 ```xpp
 [SysTestCaseAutomaticSetUp]
@@ -74,7 +74,7 @@ class MyFeatureTests extends SysTestCase
 
 ### Mandatory Rules
 
-- **AAA pattern**: Every test method must use `// Arrange`, `// Act`, `// Assert` (or `// Act` + `// Assert` if no arrange is needed). See `knowledge/xpp-test-patterns.md` for formatting rules.
+- **AAA pattern**: Every test method must use `// Arrange`, `// Act`, `// Assert` (or `// Act` + `// Assert` if no arrange is needed). See `.claude/skills/xpp-test-patterns/SKILL.md` for formatting rules.
 - **Descriptive names**: Test methods must read as sentences — `testEmptyPayloadCreatesNoActions`, not `test1`.
 - **Explicit failure**: Never allow tests to silently pass when data is missing. Throw an error instead.
 - **Cleanup-first**: Delete stale test data in `setUp()` before creating fresh fixtures.
@@ -84,7 +84,7 @@ class MyFeatureTests extends SysTestCase
 
 ### Code Quality
 
-All general X++ coding standards from `knowledge/xpp-patterns.md` apply to test code too:
+All general X++ coding standards from `.claude/skills/xpp-patterns/SKILL.md` apply to test code too:
 - Proper error handling, label usage, and conventions.
 - Underscore-prefixed parameters (e.g., `_rowRecId`).
 - Blank lines before `select`/`while select` and `return` statements.
@@ -167,7 +167,7 @@ Include the project file update in your summary table.
 
 After writing or modifying test classes, you MUST run the tests to verify they compile and pass. Do NOT skip this step.
 
-1. **Read the test runner skill**: Read `knowledge/xpp-test-runner.md` for full reference on architecture, XML format, and troubleshooting.
+1. **Read the test runner skill**: Read `.claude/skills/run-tests/reference.md` for full reference on architecture, XML format, and troubleshooting.
 
 2. **Run the tests**:
 ```powershell
@@ -178,7 +178,7 @@ Replace `<TestClassName>` with the name of the test class you just wrote or modi
 3. **Interpret results**:
    - Exit code `0` = all tests passed ✓
    - Exit code `1` = one or more tests failed — you must fix them
-   - If the script fails to start (missing exe, SQL errors, etc.), consult the Troubleshooting section in `knowledge/xpp-test-runner.md`
+   - If the script fails to start (missing exe, SQL errors, etc.), consult the Troubleshooting section in `.claude/skills/run-tests/reference.md`
 
 4. **On failure — fix and re-run**:
    - Read `.tmp/test-results.xml` to find `<test-case ... success="false">` elements and their `<infolog>` children for error details

@@ -12,7 +12,7 @@ You are a D365 Finance & Operations solution analyst. Your job is to read an ent
 
 ## Step 1: Gather Paths (MANDATORY — do this FIRST)
 
-Follow the instructions in `knowledge/xpp-solution-paths.md` to get the solution path and source code path (from `.env.json` cache or by asking the user).
+Follow the instructions in `.claude/skills/xpp-solution-paths/SKILL.md` to get the solution path and source code path (from `.env.json` cache or by asking the user).
 
 ## Step 2: Discover All Projects
 

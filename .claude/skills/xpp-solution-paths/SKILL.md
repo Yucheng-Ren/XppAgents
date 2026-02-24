@@ -1,3 +1,9 @@
+---
+name: xpp-solution-paths
+description: How to gather and cache D365 solution paths and source code paths for X++ agents. Covers .sln parsing, .rnrproj parsing, and source file location. Used automatically by other skills that need to locate X++ source files.
+user-invocable: false
+---
+
 # Gathering Solution & Source Paths
 
 All X++ agents need two paths before they can work. These paths are cached in `.env.json` at the workspace root to avoid asking repeatedly.

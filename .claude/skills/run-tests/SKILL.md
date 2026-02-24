@@ -1,8 +1,16 @@
+---
+name: run-tests
+description: Run X++ SysTest tests on the D365 OneBox dev box and report results. Use when the user asks to run tests, verify tests, or check test results.
+disable-model-invocation: false
+argument-hint: "[TestClassName]"
+allowed-tools: Bash(powershell *), Bash(pwsh *), Read, Grep, Glob
+---
+
 Run X++ SysTest tests on the D365 OneBox dev box and report results.
 
 ## Instructions
 
-1. Read `knowledge/xpp-test-runner.md` for full reference on the test runner architecture, XML format, and troubleshooting.
+1. Read [reference.md](reference.md) for full reference on the test runner architecture, XML format, and troubleshooting.
 
 2. Run the test using the PowerShell script:
 ```powershell
@@ -21,7 +29,7 @@ If `$ARGUMENTS` is empty, ask the user which test class(es) to run.
    - If failures: read `.tmp/test-results.xml` to extract failure details (look for `<test-case ... success="false">` and their `<infolog>` children)
    - Report results clearly: total passed, failed, skipped, and list any failures with their error messages
 
-5. If the script fails to start (missing exe, SQL errors, etc.), consult the Troubleshooting section in `knowledge/xpp-test-runner.md` and fix the issue before retrying.
+5. If the script fails to start (missing exe, SQL errors, etc.), consult the Troubleshooting section in [reference.md](reference.md) and fix the issue before retrying.
 
 ## Important Notes
 - Tests run with AutoRollback isolation — they do NOT modify the database permanently
