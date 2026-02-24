@@ -27,6 +27,12 @@ export async function fetchReviewData() {
   };
 }
 
+export async function fetchDiff() {
+  const resp = await fetch(`${API_BASE}/api/diff`);
+  if (!resp.ok) return null;
+  return resp.json();
+}
+
 export async function fetchAcceptedFixes() {
   const resp = await fetch(`${API_BASE}/api/accepted-fixes`);
   if (!resp.ok) return { fixes: [] };

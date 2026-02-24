@@ -1,6 +1,7 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execSync } = require('node:child_process');
 
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = __dirname;
@@ -9,6 +10,74 @@ if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR);
 const JSON_PATH = path.join(RESULTS_DIR, 'code-review-result.json');
 const ACCEPTED_PATH = path.join(RESULTS_DIR, 'accepted-fixes.json');
 const FRONTEND_DIST = path.join(DATA_DIR, 'frontend', 'dist');
+
+// Git repo path — auto-detected from GIT_REPO_PATH env var or defaults
+const GIT_REPO_PATH = process.env.GIT_REPO_PATH || '';
+const DIFF_CACHE_PATH = path.join(RESULTS_DIR, 'diff-cache.json');
+
+/**
+ * Compute git diff between parentBranch and branch.
+ * Always computes fresh from git, then caches as fallback for when branches are deleted/merged.
+ * Returns the unified diff string, empty string (no changes), or null (error).
+ */
+function computeGitDiff(reviewData) {
+    if (!reviewData || reviewData.mode !== 'branch-diff') return null;
+    const { branch, parentBranch } = reviewData;
+    if (!branch || !parentBranch) return null;
+
+    // Determine repo path: env var, or try to find .git in common locations
+    let repoPath = GIT_REPO_PATH;
+    if (!repoPath) {
+        const candidates = [
+            path.join(DATA_DIR, '..', 'ApplicationSuite'),
+            path.join(require('node:os').homedir(), 'git', 'ApplicationSuite'),
+        ];
+        for (const c of candidates) {
+            if (fs.existsSync(path.join(c, '.git'))) { repoPath = c; break; }
+        }
+    }
+
+    // Try live git diff first (always fresh)
+    // Use parentBranch as base; if HEAD is on `branch`, diff against working tree
+    // so uncommitted changes are included.
+    if (repoPath) {
+        try {
+            // Check if we're currently on the target branch
+            const currentBranch = execSync('git branch --show-current', { cwd: repoPath, encoding: 'utf-8' }).trim();
+            let diff;
+            if (currentBranch === branch) {
+                // Diff base branch against working tree (includes uncommitted changes)
+                diff = execSync(
+                    `git diff ${parentBranch}`,
+                    { cwd: repoPath, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
+                );
+            } else {
+                // Not on target branch — diff committed snapshots only
+                diff = execSync(
+                    `git diff ${parentBranch}..${branch}`,
+                    { cwd: repoPath, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
+                );
+            }
+            // Cache for fallback use (e.g., after branch deletion)
+            fs.writeFileSync(DIFF_CACHE_PATH, JSON.stringify({ branch, parentBranch, diff, cachedAt: new Date().toISOString() }), 'utf-8');
+            return diff;
+        } catch (err) {
+            console.error('Live git diff failed, trying cache:', err.message);
+        }
+    }
+
+    // Fallback: use cached diff if branches no longer exist
+    if (fs.existsSync(DIFF_CACHE_PATH)) {
+        try {
+            const cached = JSON.parse(fs.readFileSync(DIFF_CACHE_PATH, 'utf-8'));
+            if (cached.branch === branch && cached.parentBranch === parentBranch && typeof cached.diff === 'string') {
+                return cached.diff;
+            }
+        } catch { /* ignore corrupt cache */ }
+    }
+
+    return null;
+}
 
 function loadJson() {
     if (!fs.existsSync(JSON_PATH)) return null;
@@ -62,6 +131,29 @@ const server = http.createServer(async (req, res) => {
         const data = loadJson();
         res.writeHead(data ? 200 : 404, { 'Content-Type': 'application/json' });
         res.end(data ? JSON.stringify(data, null, 2) : JSON.stringify({ error: 'No review data found' }));
+        return;
+    }
+
+    // API: return git diff for branch-diff reviews
+    if (url.pathname === '/api/diff') {
+        const data = loadJson();
+        if (!data) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'No review data found' }));
+            return;
+        }
+        const diff = computeGitDiff(data);
+        if (diff === null) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Diff not available. Set GIT_REPO_PATH env var or ensure the git repo is accessible.' }));
+            return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            branch: data.branch,
+            parentBranch: data.parentBranch,
+            diff,
+        }));
         return;
     }
 

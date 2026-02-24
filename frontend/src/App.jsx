@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import { fetchReviewData } from './api';
 import FileListPage from './pages/FileListPage';
 import FileDetailPage from './pages/FileDetailPage';
+import DiffPage from './pages/DiffPage';
 import './App.css';
 
 export default function App() {
@@ -59,6 +60,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<FileListPage data={data} />} />
         <Route path="/file/:fileName" element={<FileDetailPage data={data} />} />
+        <Route path="/changes" element={<DiffPage data={data} />} />
       </Routes>
       <Footer date={data.date} />
     </HashRouter>

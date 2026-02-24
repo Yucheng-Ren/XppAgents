@@ -25,6 +25,12 @@ export default function FileListPage({ data }) {
         branchInfo={branchInfo}
       />
       <div className="container">
+        {data.mode === 'branch-diff' && (
+          <div className="nav-tabs">
+            <span className="nav-tab active">📊 Review</span>
+            <Link to="/changes" className="nav-tab">📝 Changes</Link>
+          </div>
+        )}
         <SummaryBanner
           title="Review Summary"
           summary={data.summary || ''}
