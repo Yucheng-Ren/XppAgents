@@ -1,6 +1,6 @@
 # X++ Code Review & Development Toolkit
 
-A set of GitHub Copilot agents and a React dashboard for reviewing, writing, and maintaining X++ code in Dynamics 365 Finance & Operations projects.
+A set of GitHub Copilot agents, Claude Code skills, an automated test runner, and a React dashboard for reviewing, writing, testing, and maintaining X++ code in Dynamics 365 Finance & Operations projects.
 
 ## Quick Start
 
@@ -20,7 +20,7 @@ The dashboard is available at **http://localhost:3000**.
 
 ## Agents
 
-This toolkit provides four Copilot agents (in `.github/agents/`). Invoke them in VS Code Copilot Chat using `@agent-name`.
+Five Copilot agents live in `.github/agents/`. Invoke them in VS Code Copilot Chat using `@agent-name`.
 
 ### @xpp-solution-analyzer — Understand your solution
 
@@ -57,7 +57,7 @@ Performs a comprehensive code review against X++ best practices, security patter
 
 ### @xpp-coder — Write and modify X++ code
 
-An expert X++ developer that writes production-quality code following D365 conventions and the patterns defined in `knowledge/xpp-patterns.md`.
+An expert X++ developer that writes production-quality code following D365 conventions.
 
 ```
 @xpp-coder create a batch job class that processes purchase orders
@@ -70,6 +70,21 @@ An expert X++ developer that writes production-quality code following D365 conve
 - Modify existing code — add methods, refactor, optimize, fix bugs
 - Implement patterns — Chain of Command, SysOperation batch jobs, number sequences, event handlers
 - Auto-updates `.rnrproj` project files when creating new objects
+
+### @xpp-test-writer — Write and verify X++ tests
+
+Writes thorough X++ test classes following SysTest framework patterns, then runs them on the OneBox dev box to verify they pass.
+
+```
+@xpp-test-writer write tests for PurchCopilotGenActionPlanParser
+@xpp-test-writer add test coverage for the email filter feature
+```
+
+**Capabilities:**
+- Generates test classes following AAA (Arrange/Act/Assert) pattern
+- Uses ATL entity builders, `SysDetourContext` mocking, and form adaptors where appropriate
+- Auto-runs tests via the CLI test runner after writing them
+- Iterates up to 3 fix cycles if tests fail, then reports results
 
 ### @xpp-fix-applier — Apply accepted review fixes
 
@@ -94,7 +109,44 @@ After reviewing issues on the dashboard and clicking **Accept Fix**, this agent 
 3.  Open http://localhost:3000 → review issues → click "Accept Fix" on issues to fix
 4.  @xpp-fix-applier apply accepted fixes
 5.  @xpp-coder <implement new features or refactor code>
+6.  @xpp-test-writer write tests for <class>
 ```
+
+## Test Runner
+
+An automated CLI test runner for X++ SysTests on a D365 OneBox dev box.
+
+```powershell
+# Run a single test class
+.\scripts\Run-XppTests.ps1 -TestClasses "MyTestClass"
+
+# Run multiple test classes
+.\scripts\Run-XppTests.ps1 -TestClasses "ClassA,ClassB"
+```
+
+**Architecture:**
+```
+Run-XppTests.ps1                     PowerShell orchestrator
+  └─► scripts/SysTestLauncher.exe    C# wrapper (bypasses ReadKey prompt)
+        └─► SysTestConsole.17.0.exe  D365 built-in CLI test runner
+              └─► AxDB SQL Server    Test execution with AutoRollback isolation
+```
+
+- Exit code `0` = all passed, `1` = failures
+- Results written to `.tmp/test-results.xml` (SysTestListenerXML format)
+- First test takes ~15s (AOS kernel init), subsequent tests ~3s each
+
+## Claude Code Skills
+
+Domain knowledge and task automation packaged as [Claude Code skills](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/skills) in `.claude/skills/`. These are also referenced by the GitHub Copilot agents as shared knowledge.
+
+| Skill | Type | Description |
+|-------|------|-------------|
+| `run-tests` | Task (invokable via `/run-tests`) | Run X++ tests and report results |
+| `xpp-patterns` | Reference (auto-loaded) | X++ coding patterns, rules, and anti-patterns |
+| `xpp-test-patterns` | Reference (auto-loaded) | X++ test writing patterns (AAA, naming, setup) |
+| `xpp-solution-paths` | Reference (auto-loaded) | Solution/source path resolution and caching |
+| `less-vrtt` | Reference (auto-loaded) | LESS styles and VRTT for extensible controls |
 
 ## Dashboard
 
@@ -122,31 +174,43 @@ A React app (Vite + React 19) that visualizes code review results.
 ## Project Structure
 
 ```
-CodeReview/
-├── .github/agents/          # Copilot agent definitions
+XppAgents/
+├── .github/agents/              # Copilot agent definitions
 │   ├── xpp-solution-analyzer.agent.md
 │   ├── xpp-code-reviewer.agent.md
 │   ├── xpp-coder.agent.md
+│   ├── xpp-test-writer.agent.md
 │   └── xpp-fix-applier.agent.md
-├── knowledge/               # Shared knowledge files read by all agents
-│   ├── xpp-patterns.md      # X++ coding rules, patterns & anti-patterns
-│   ├── xpp-solution-paths.md # Path resolution & caching logic
-│   └── agent-memory.md      # Cross-session memory instructions
-├── frontend/                # React dashboard app (Vite)
+├── .claude/
+│   ├── CLAUDE.md                # Claude Code project instructions
+│   └── skills/                  # Claude Code skills
+│       ├── run-tests/           # Test runner skill (SKILL.md + reference.md + lessons.md)
+│       ├── xpp-patterns/        # X++ coding patterns (SKILL.md)
+│       ├── xpp-test-patterns/   # X++ test patterns (SKILL.md + reference.md)
+│       ├── xpp-solution-paths/  # Path resolution (SKILL.md)
+│       └── less-vrtt/           # LESS/VRTT docs (SKILL.md)
+├── scripts/                     # CLI test runner
+│   ├── Run-XppTests.ps1         # PowerShell orchestrator
+│   ├── SysTestLauncher.exe      # C# wrapper (bypasses Console.ReadKey)
+│   └── SysTestLauncher.cs       # Source for the launcher
+├── frontend/                    # React dashboard app (Vite)
 │   ├── src/
-│   │   ├── components/      # Header, StatsGrid, Charts, FilterBar, IssueCard
-│   │   ├── pages/           # FileListPage, FileDetailPage
-│   │   ├── App.jsx          # Router setup
-│   │   ├── api.js           # API client
-│   │   └── utils.js         # Helpers
+│   │   ├── components/          # Header, StatsGrid, Charts, FilterBar, IssueCard
+│   │   ├── pages/               # FileListPage, FileDetailPage, DiffPage
+│   │   ├── App.jsx              # Router setup
+│   │   ├── api.js               # API client
+│   │   └── utils.js             # Helpers
 │   └── package.json
-├── server.js                # Node.js HTTP server (API + static file serving)
-├── package.json             # Root scripts
-├── .env.json                # Cached solution/source paths (git-ignored)
-└── .tmp/                    # Generated output files (git-ignored)
-    ├── .memory.md           # Agent memory file
+├── knowledge/
+│   └── agent-memory.md          # Cross-session memory instructions
+├── server.js                    # Node.js HTTP server (API + static file serving)
+├── package.json                 # Root scripts
+├── .env.json                    # Cached solution/source paths (git-ignored)
+└── .tmp/                        # Generated output files (git-ignored)
+    ├── .memory.md               # Agent memory file
     ├── code-review-result.json
     ├── accepted-fixes.json
+    ├── test-results.xml
     └── solution-summary.md
 ```
 
