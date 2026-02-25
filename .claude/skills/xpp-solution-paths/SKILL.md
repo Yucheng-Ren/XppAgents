@@ -60,13 +60,13 @@ This ensures the next agent invocation can reuse them without asking again.
    ```
    For example:
    ```
-   Project("{FC65038C-1B2F-41E1-A629-BED71D161FFF}") = "SCM Copilot (SYS) [SCM Copilot]", "SCM Copilot.rnrproj", "{5B076764-...}"
-   Project("{FC65038C-1B2F-41E1-A629-BED71D161FFF}") = "SCM Copilot Tests (SYS) [SCM Copilot Tests]", "..\SCM Copilot Tests\SCM Copilot Tests.rnrproj", "{EAA0AC0A-...}"
+   Project("{FC65038C-1B2F-41E1-A629-BED71D161FFF}") = "My Project (SYS) [My Project]", "My Project.rnrproj", "{5B076764-...}"
+   Project("{FC65038C-1B2F-41E1-A629-BED71D161FFF}") = "My Project Tests (SYS) [My Project Tests]", "..\My Project Tests\My Project Tests.rnrproj", "{EAA0AC0A-...}"
    ```
 3. Extract ALL `.rnrproj` paths from the project lines.
-4. Resolve each path **relative to the `.sln` file's directory**. For example, if the `.sln` is at `C:\repos\SCM Copilot\SCM Copilot.sln`:
-   - `"SCM Copilot.rnrproj"` → `C:\repos\SCM Copilot\SCM Copilot.rnrproj`
-   - `"..\SCM Copilot Tests\SCM Copilot Tests.rnrproj"` → `C:\repos\SCM Copilot Tests\SCM Copilot Tests.rnrproj`
+4. Resolve each path **relative to the `.sln` file's directory**. For example, if the `.sln` is at `C:\repos\My Project\My Project.sln`:
+   - `"My Project.rnrproj"` → `C:\repos\My Project\My Project.rnrproj`
+   - `"..\My Project Tests\My Project Tests.rnrproj"` → `C:\repos\My Project Tests\My Project Tests.rnrproj`
 
 ### Step B: Read EVERY .rnrproj file
 
@@ -74,14 +74,14 @@ For **each** `.rnrproj` found in the `.sln`:
 
 1. Read the XML file and parse the `<ItemGroup>` section containing `<Content Include="...">` elements.
 2. Extract classes, tables, forms, and other objects from the `Include` attribute. The format is `<ObjectType>\<ObjectName>`, for example:
-   - `AxClass\PurchCopilotController` → Class named `PurchCopilotController`
-   - `AxTable\PurchCopilotGenAction` → Table named `PurchCopilotGenAction`
-   - `AxForm\PurchCopilotGenUI` → Form named `PurchCopilotGenUI`
-   - `AxEnum\PurchCopilotDataType` → Enum named `PurchCopilotDataType`
-   - `AxEdt\PurchCopilotEntityName` → EDT named `PurchCopilotEntityName`
+   - `AxClass\MyController` → Class named `MyController`
+   - `AxTable\MyDataTable` → Table named `MyDataTable`
+   - `AxForm\MyFormUI` → Form named `MyFormUI`
+   - `AxEnum\MyEnumType` → Enum named `MyEnumType`
+   - `AxEdt\MyEdtName` → EDT named `MyEdtName`
    - Other prefixes: `AxSecurityDuty`, `AxSecurityPrivilege`, `AxMenuItemAction`, `AxLabelFile`, etc.
 
-3. Extract the `<Model>` property from each `.rnrproj` file (e.g., `<Model>SCMCopilot</Model>`). Different projects may have different model names.
+3. Extract the `<Model>` property from each `.rnrproj` file (e.g., `<Model>MyModel</Model>`). Different projects may have different model names.
 
 4. **Aggregate** all objects across all projects. Keep track of which model each object belongs to (needed for file path resolution).
 

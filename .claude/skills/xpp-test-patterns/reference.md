@@ -8,33 +8,33 @@ Class-level attributes control test granularity, data dependencies, feature togg
 
 | Attribute | Purpose | Example Files |
 |-----------|---------|---------------|
-| `SysTestGranularity(SysTestGranularity::Unit)` | Marks test as unit-level (fast, isolated) | PurchCopilotInboundEmailProcessingTaskTests, PurchCopilotGenTableColumnTest |
-| `SysTestTarget(classStr(...))` or `SysTestTarget(tableStr(...))` | Declares which class/table is under test | PurchCopilotGenActionPlanParserTest, AgreementClassificationTest |
-| `SysTestTargetAttribute(classStr(...))` | Alternate form of SysTestTarget | PurchCopilotEntityActionTest, PurchCopilotGenControllerExecuteActionTest |
-| `SysTestCaseDataDependency('USMF')` | Test requires demo data from a specific legal entity | PurchCopilotGenActionPlanParserTest, PurchCopilotEntityActionTest, PurchCopilotGenControllerExecuteActionTest |
+| `SysTestGranularity(SysTestGranularity::Unit)` | Marks test as unit-level (fast, isolated) | EmailProcessingTaskTests, TableColumnTest |
+| `SysTestTarget(classStr(...))` or `SysTestTarget(tableStr(...))` | Declares which class/table is under test | ActionPlanParserTest, AgreementClassificationTest |
+| `SysTestTargetAttribute(classStr(...))` | Alternate form of SysTestTarget | EntityActionTest, ControllerExecuteActionTest |
+| `SysTestCaseDataDependency('USMF')` | Test requires demo data from a specific legal entity | ActionPlanParserTest, EntityActionTest, ControllerExecuteActionTest |
 | `SysTestCaseAutomaticNumberSequences` | Auto-configures number sequences for the test | DataQualityBaseTest, AgreementConfirm_PurchTest, AgreementClassificationTest (method-level) |
-| `SysTestCaseMethodLevelContextEnabled` | Enables per-method test isolation/context | PurchCopilotInboundEmailProcessingTaskTests, AgreementClassificationTest |
-| `SysTestCheckinTest` / `SysTestCheckInTest` | Marks as a check-in (fast) test to run on every build | PurchCopilotGenTableColumnTest, PurchCopilotInboundEmailApplySuggestionTest, AgreementClassificationTest, AgreementConfirm_PurchTest |
-| `SysTestFeatureDependency(classStr(...), true/false)` | Enables/disables feature flights for the test | PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWorkspaceScenarioTest, DataQualityBaseTest |
-| `SysTestSecurity(roleStr(...), [...], bool)` | Runs tests with specific security roles | PurchCopilotGenControllerExecuteActionTest, PurchCopilotInboundEmailWorkspaceScenarioTest |
-| `SysTestCategory('SCMCopilot')` | Categorizes test for filtering | PurchCopilotGenTableColumnTest |
+| `SysTestCaseMethodLevelContextEnabled` | Enables per-method test isolation/context | EmailProcessingTaskTests, AgreementClassificationTest |
+| `SysTestCheckinTest` / `SysTestCheckInTest` | Marks as a check-in (fast) test to run on every build | TableColumnTest, EmailApplySuggestionTest, AgreementClassificationTest, AgreementConfirm_PurchTest |
+| `SysTestFeatureDependency(classStr(...), true/false)` | Enables/disables feature flights for the test | EmailApplySuggestionTest, EmailWorkspaceScenarioTest, DataQualityBaseTest |
+| `SysTestSecurity(roleStr(...), [...], bool)` | Runs tests with specific security roles | ControllerExecuteActionTest, EmailWorkspaceScenarioTest |
+| `SysTestCategory('MyFeature')` | Categorizes test for filtering | TableColumnTest |
 | `SysTestFixture(classstr(...))` | Specifies a fixture/suite class | AgreementClassificationTest |
 
 **Representative example:**
 ```xpp
-[SysTestTargetAttribute(classStr(PurchCopilotGenActionPlanParser)),
+[SysTestTargetAttribute(classStr(ActionPlanParser)),
  SysTestCaseDataDependency('USMF')]
-internal final class PurchCopilotGenActionPlanParserTest extends SysTestCase
+internal final class ActionPlanParserTest extends SysTestCase
 ```
 
 ```xpp
 [
     SysTestCheckInTest,
-    SysTestFeatureDependency(classStr(PurchCopilotInboundEmailProcessingFeature)),
-    SysTestFeatureDependency(classStr(PurchCopilotDisableAgentValidatorFlight)),
-    SysTestFeatureDependency(classStr(PurchCopilotInboundUseLLMBasedLineMatchingFlight), false)
+    SysTestFeatureDependency(classStr(MyEmailProcessingFeature)),
+    SysTestFeatureDependency(classStr(MyDisableAgentValidatorFlight)),
+    SysTestFeatureDependency(classStr(MyUseLLMBasedLineMatchingFlight), false)
 ]
-internal final class PurchCopilotInboundEmailApplySuggestionTest extends AtlPurchaseTestCase
+internal final class EmailApplySuggestionTest extends AtlPurchaseTestCase
 ```
 
 **Rules:**
@@ -52,8 +52,8 @@ internal final class PurchCopilotInboundEmailApplySuggestionTest extends AtlPurc
 
 | Base Class | Purpose | Files Using It |
 |------------|---------|----------------|
-| `SysTestCase` | Standard base for all X++ tests | PurchCopilotGenActionPlanParserTest, PurchCopilotEntityActionTest, PurchCopilotInboundEmailProcessingTaskTests, PurchCopilotGenControllerExecuteActionTest, DataQualityBaseTest, PurchCopilotGenTableColumnTest, AgreementClassificationTest, AgreementConfirm_PurchTest |
-| `AtlPurchaseTestCase` | ATL-enriched base providing `purch`, `data`, `vend`, `vendors`, `invent`, `items`, `warehouse` context objects | PurchCopilotFollowupTaskTemplateTest, PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWorkspaceScenarioTest, PurchCopilotInboundEmailE2EApplySuggestionsTestBase |
+| `SysTestCase` | Standard base for all X++ tests | ActionPlanParserTest, EntityActionTest, EmailProcessingTaskTests, ControllerExecuteActionTest, DataQualityBaseTest, TableColumnTest, AgreementClassificationTest, AgreementConfirm_PurchTest |
+| `AtlPurchaseTestCase` | ATL-enriched base providing `purch`, `data`, `vend`, `vendors`, `invent`, `items`, `warehouse` context objects | FollowupTaskTemplateTest, EmailApplySuggestionTest, EmailWorkspaceScenarioTest, EmailE2EApplySuggestionsTestBase |
 
 **Convention:** When tests use ATL entities heavily (purchase orders, vendors, inventory), extend `AtlPurchaseTestCase`. It provides pre-initialized `purch`, `data`, `vend`, `vendors`, `invent`, `items`, `warehouse` members that let you fluently create test data. When tests are simpler or use direct record manipulation, extend `SysTestCase`.
 
@@ -85,14 +85,14 @@ Files: DataQualityBaseTest
 public void setUp()
 {
     super();
-    parser = PurchCopilotGenActionPlanParser::construct();
+    parser = ActionPlanParser::construct();
     this.loadRealPurchaseOrderData();
     this.setupTestData();
-    headerTable = PurchCopilotGenTable::findByName(HeaderGenTableName);
-    lineTable = PurchCopilotGenTable::findByName(LineGenTableName);
+    headerTable = MyGenTable::findByName(HeaderGenTableName);
+    lineTable = MyGenTable::findByName(LineGenTableName);
 }
 ```
-Files: PurchCopilotGenActionPlanParserTest, PurchCopilotEntityActionTest, PurchCopilotGenControllerExecuteActionTest
+Files: ActionPlanParserTest, EntityActionTest, ControllerExecuteActionTest
 
 **Pattern C: setUp with ATL fluent data creation inside ttsbegin/ttscommit**
 ```xpp
@@ -101,7 +101,7 @@ public void setUp()
     super();
 
     ttsbegin;
-    purchCopilotInbound = purch.copilot().inbound();
+    myFeatureInbound = purch.copilot().inbound();
     purch.parameters().setUpdateConfirmedDeliveryDate(TradeTable2LineUpdate::Always);
 
     var wh = data.invent().warehouses().default();
@@ -115,22 +115,22 @@ public void setUp()
     ttscommit;
 }
 ```
-Files: PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWorkspaceScenarioTest, PurchCopilotInboundEmailE2EApplySuggestionsTestBase
+Files: EmailApplySuggestionTest, EmailWorkspaceScenarioTest, EmailE2EApplySuggestionsTestBase
 
 **Pattern D: Cleanup-first in setUp/setupTestData**
 ```xpp
 private void setupTestData()
 {
     ttsbegin;
-    AtlDataPurchCopilotGen::cleanupAll();   // <-- cleanup first
+    AtlDataMyGen::cleanupAll();   // <-- cleanup first
 
     // Then create fresh data...
-    AtlEntityPurchCopilotGenTable tableEntity = AtlDataPurchCopilotGen::createGenTable(...);
+    AtlEntityMyGenTable tableEntity = AtlDataMyGen::createGenTable(...);
     // ...
     ttscommit;
 }
 ```
-Files: PurchCopilotGenActionPlanParserTest, PurchCopilotEntityActionTest, PurchCopilotGenControllerExecuteActionTest
+Files: ActionPlanParserTest, EntityActionTest, ControllerExecuteActionTest
 
 **Rule:** Always call `super()` first in `setUp()`. Prefer cleanup-first (delete stale data before creating fresh fixtures). Wrap data manipulation in `ttsbegin`/`ttscommit`.
 
@@ -148,20 +148,20 @@ public void tearDown()
 
 private void cleanupTestData()
 {
-    AtlDataPurchCopilotGen::cleanupAll();
+    AtlDataMyGen::cleanupAll();
 }
 ```
-Files: PurchCopilotGenActionPlanParserTest, PurchCopilotEntityActionTest, PurchCopilotGenControllerExecuteActionTest
+Files: ActionPlanParserTest, EntityActionTest, ControllerExecuteActionTest
 
 **Minimal tearDown (cleanup only):**
 ```xpp
 internal void tearDown()
 {
-    AtlDataPurchCopilotGen::cleanupAll();
+    AtlDataMyGen::cleanupAll();
     super();
 }
 ```
-Files: PurchCopilotGenTableColumnTest
+Files: TableColumnTest
 
 **Rules:**
 - Always call `super()` LAST in tearDown (opposite of setUp).
@@ -178,7 +178,7 @@ Files: PurchCopilotGenTableColumnTest
 | `[SysTestMethod]` | Standard test method marker | Most test methods |
 | `[SysTestCheckinTest]` / `[SysTestCheckInTest]` | Marks method as check-in level (can be class-level or method-level) | AgreementClassificationTest methods |
 | `[SysTestMethodProperty]` | Sets test method properties | (Not observed in these files but known X++ pattern) |
-| `[SysTestFeatureDependency(classStr(...), true)]` | Method-level feature toggle | PurchCopilotInboundEmailApplySuggestionTest.lineChangesEmailApplyLineSuggestion_DeliverDateUpdated |
+| `[SysTestFeatureDependency(classStr(...), true)]` | Method-level feature toggle | EmailApplySuggestionTest.lineChangesEmailApplyLineSuggestion_DeliverDateUpdated |
 | `[SysTestCaseAutomaticNumberSequences]` | Method-level number sequence setup | AgreementClassificationTest.changeDirectInvoiceEnable_LinkedPurchaseAgreement_Warning |
 
 **Convention:** Use `[SysTestMethod]` as the standard marker. `[SysTestCheckinTest]` can be applied at class level (all methods) or individual method level. Feature dependencies can also be applied per-method when only one test needs a specific flight.
@@ -204,15 +204,15 @@ poLine1 = purchaseOrder.addLine()
 
 ```xpp
 // ATL entity builder chain
-AtlEntityPurchCopilotGenTable tableEntity = AtlDataPurchCopilotGen::createGenTable(TestTableName, TestEntityName);
-AtlEntityPurchCopilotGenTableColumn keyColEntity = AtlDataPurchCopilotGen::createColumn(
+AtlEntityMyGenTable tableEntity = AtlDataMyGen::createGenTable(TestTableName, TestEntityName);
+AtlEntityMyTableColumn keyColEntity = AtlDataMyGen::createColumn(
     genTableRecId, TestKeyColumnName, TestKeyColumnName,
-    PurchCopilotDataType::Text, NoYes::Yes);
+    MyDataType::Text, NoYes::Yes);
 ```
 
 ```xpp
 // ATL construct → set → save pattern
-AtlEntityPurchCopilotGenActionPlan planEntity = AtlEntityPurchCopilotGenActionPlan::construct()
+AtlEntityMyActionPlan planEntity = AtlEntityMyActionPlan::construct()
     .setSummary('Test action plan')
     .save();
 ```
@@ -227,7 +227,7 @@ route1.addOperation().setOperation(production.operations().assembly())
     .save();
 ```
 
-Files: PurchCopilotFollowupTaskTemplateTest, PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWorkspaceScenarioTest, PurchCopilotInboundEmailE2EApplySuggestionsTestBase, PurchCopilotEntityActionTest, DataQualityBaseTest
+Files: FollowupTaskTemplateTest, EmailApplySuggestionTest, EmailWorkspaceScenarioTest, EmailE2EApplySuggestionsTestBase, EntityActionTest, DataQualityBaseTest
 
 #### 6b. Direct Record Insert with doInsert()
 
@@ -242,13 +242,13 @@ prodTable.doInsert();
 ```
 
 ```xpp
-PurchCopilotGenAction badAction;
+MyGenAction badAction;
 badAction.ClassName = 'NonExistentClassName';
 badAction.Name = 'Bad Action';
 badAction.doInsert();
 ```
 
-Files: DataQualityBaseTest, PurchCopilotGenControllerExecuteActionTest
+Files: DataQualityBaseTest, ControllerExecuteActionTest
 
 #### 6c. Standard insert()
 
@@ -312,7 +312,7 @@ str emailMapping = strFmt(
     , purchId, date2StrUsr(nextWeek));
 ```
 
-Files: PurchCopilotGenActionPlanParserTest, PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWorkspaceScenarioTest, PurchCopilotInboundEmailE2EApplySuggestionsTestBase
+Files: ActionPlanParserTest, EmailApplySuggestionTest, EmailWorkspaceScenarioTest, EmailE2EApplySuggestionsTestBase
 
 **Rules:**
 - Use ATL entities when available — prefer fluent builder chains.
@@ -329,7 +329,7 @@ Files: PurchCopilotGenActionPlanParserTest, PurchCopilotInboundEmailApplySuggest
 // String constants for test data
 private const str TestTableName          = 'TestSecurityTable';
 private const str TestEntityName         = 'PurchPurchaseOrderHeaderV2Entity';
-private const str TestActionClassName    = 'PurchCopilotActionUpdatePurchaseOrder';
+private const str TestActionClassName    = 'MyActionUpdatePurchaseOrder';
 private const str TestLegalEntity        = 'usmf';
 
 // ItemId constants
@@ -350,8 +350,8 @@ private RecId actionRecId;
 private RecId actionPlanRecId;
 
 // Table column records (for assertions)
-private PurchCopilotGenTableColumn keyColumn;
-private PurchCopilotGenTableColumn dateColumn;
+private MyTableColumn keyColumn;
+private MyTableColumn dateColumn;
 ```
 
 **Conventions:**
@@ -359,7 +359,7 @@ private PurchCopilotGenTableColumn dateColumn;
 - Use `private const` with typed EDTs (like `ItemId`) when appropriate.
 - Use `private readonly date` for computed relative dates.
 - Track `RecId` values as class-level fields when setUp creates records and tests need them.
-- Store full record buffers (e.g., `PurchCopilotGenTableColumn keyColumn`) when multiple tests need to reference the same record's fields.
+- Store full record buffers (e.g., `MyTableColumn keyColumn`) when multiple tests need to reference the same record's fields.
 - ATL entity references are stored as class-level fields: `private AtlEntityPurchaseOrder poHeader`.
 - Use `protected` for fields in abstract base classes that subclasses need.
 
@@ -369,9 +369,9 @@ private PurchCopilotGenTableColumn dateColumn;
 
 #### 8a. Lookup helpers (find record by criteria)
 ```xpp
-private PurchCopilotGenTableRow findHeaderRow(RecId _actionInstance, PurchCopilotGenRowType _rowType = PurchCopilotGenRowType::ChangeDetected)
+private MyTableRow findHeaderRow(RecId _actionInstance, MyGenRowType _rowType = MyGenRowType::ChangeDetected)
 {
-    PurchCopilotGenTableRow row;
+    MyTableRow row;
     select firstonly row
         where row.ActionInstance == _actionInstance
            && row.Table == headerTable.RecId
@@ -385,7 +385,7 @@ private PurchCopilotGenTableRow findHeaderRow(RecId _actionInstance, PurchCopilo
 ```xpp
 private int countPlanActions(RecId _actionPlan)
 {
-    PurchCopilotGenActionInstance actionInstance;
+    MyGenActionInstance actionInstance;
     int actionCount = 0;
     while select actionInstance
         where actionInstance.ActionPlan == _actionPlan
@@ -419,10 +419,10 @@ protected void addProdTransaction(
 private RecId createAdditionalChangeDetectedRow(str _keyValue)
 {
     ttsbegin;
-    AtlEntityPurchCopilotGenTableRow rowEntity = AtlEntityPurchCopilotGenTableRow::construct()
+    AtlEntityMyTableRow rowEntity = AtlEntityMyTableRow::construct()
         .setTable(genTableRecId)
         .setActionInstance(actionInstanceRecId)
-        .setType(PurchCopilotGenRowType::ChangeDetected)
+        .setType(MyGenRowType::ChangeDetected)
         .save();
     // ... create cells ...
     ttscommit;
@@ -434,20 +434,20 @@ private RecId createAdditionalChangeDetectedRow(str _keyValue)
 ```xpp
 private void validateRowsForActivePOHeaderWithConfirmedDeliveryChange(
     AtlEntityPurchaseOrder _purchOrder,
-    AtlEntityPurchCopilotInboundEmailMatchingOrder _matchingOrder,
+    AtlEntityMyInboundEmailMatchingOrder _matchingOrder,
     date _newConfirmedDeliveryDate,
     boolean _expectsExplanation,
     int _expectedLinesCount,
     FormAdaptor _emailWorkspace)
 {
-    var validator = PurchCopilotInboundEmailWorkspaceTestHeaderGroupValidator::construct(_emailWorkspace, _expectedLinesCount);
+    var validator = MyInboundEmailWorkspaceTestHeaderGroupValidator::construct(_emailWorkspace, _expectedLinesCount);
     validator.validateOriginalRow(_purchOrder);
     if (_expectsExplanation)
     {
-        validator.validateHistoryRow(_matchingOrder.getHistoryEntry(PurchCopilotInboundEmailMatchingHistoryType::ValueFromEmail));
+        validator.validateHistoryRow(_matchingOrder.getHistoryEntry(MyInboundEmailMatchingHistoryType::ValueFromEmail));
     }
     validator.validateChangeRow(
-        PurchCopilotInboundAgentSuggestion::ChangeDetected,
+        MyInboundAgentSuggestion::ChangeDetected,
         enum2Str(this.getExpectedDocumentStateAfterChange()),
         _newConfirmedDeliveryDate,
         _purchOrder.parmDeliveryDate(),
@@ -490,7 +490,7 @@ this.assertNotEqual(0, actionPlanTable.RecId, 'ActionPlan should be created');
 this.assertExpectedInfoLogMessage("@SCM:ErrorSecondaryResponsibleWorkerWithoutAPrimary");
 AtlInfologValidator::assertError("Cannot delete a field managed by Microsoft.");
 ```
-Files: AgreementClassificationTest, PurchCopilotGenTableColumnTest
+Files: AgreementClassificationTest, TableColumnTest
 
 #### 9c. MessageCenter validation (form-level messages)
 ```xpp
@@ -502,12 +502,12 @@ Files: AgreementClassificationTest
 #### 9d. Form adaptor validation (UI assertion)
 ```xpp
 emailWorkspace.HeaderChangesGrid().validateCount(2);
-emailWorkspace.PurchCopilotInboundReviewHeaderMatchingTmp_Description().validate(enum2Str(PurchCopilotInboundAgentSuggestion::None));
-emailWorkspace.PurchCopilotInboundReviewHeaderMatchingTmp_ConfirmedDlv().validate(nextWeek);
+emailWorkspace.MyInboundReviewHeaderMatchingTmp_Description().validate(enum2Str(MyInboundAgentSuggestion::None));
+emailWorkspace.MyInboundReviewHeaderMatchingTmp_ConfirmedDlv().validate(nextWeek);
 emailWorkspace.ExplainAgentActionsCheckbox().validate(false);
 emailWorkspace.ShowChangesOnlyButton().validate(true);
 ```
-Files: PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWorkspaceScenarioTest, PurchCopilotInboundEmailE2EApplySuggestionsTestBase
+Files: EmailApplySuggestionTest, EmailWorkspaceScenarioTest, EmailE2EApplySuggestionsTestBase
 
 #### 9e. Reread-then-assert pattern
 ```xpp
@@ -541,7 +541,7 @@ using (var context = SysDetourContext::createContext())
     // ... test code that would normally call the real method ...
 }
 ```
-Files: PurchCopilotInboundEmailProcessingTaskTests
+Files: EmailProcessingTaskTests
 
 **Key API:**
 - `SysDetourContext::createContext()` — creates a detour context (disposable via `using`)
@@ -555,10 +555,10 @@ Used to expose protected/internal methods for testing:
 
 ```xpp
 // In test class declaration
-private PurchCopilotEntityActionTestable testable;
+private MyEntityActionTestable testable;
 
 // In setUp
-testable = PurchCopilotEntityActionTestable::construct();
+testable = MyEntityActionTestable::construct();
 testable.testableInit(actionInstanceRecord);
 
 // In test methods — call exposed protected methods via testable wrapper
@@ -567,21 +567,21 @@ Map result = testable.testableBuildFieldValues(changeDetectedRowRecId, columns);
 testable.testableSetFieldValuesOnBuffer(entityBuf, fieldValues, tableId);
 boolean isEmpty = testable.testableIsEmptyCellValue('', col);
 ```
-Files: PurchCopilotEntityActionTest
+Files: EntityActionTest
 
 **Convention:** The testable class wraps the production class and exposes protected methods as `testable<MethodName>()`. The testable class itself sits in the test module (not production code).
 
 #### 10c. SysTestSecurityContext (Security Persona Switching)
 ```xpp
-using (var securityScope = SysTestSecurityContext::setCurrentPersona('PurchCopilotTestNoAccessUser'))
+using (var securityScope = SysTestSecurityContext::setCurrentPersona('MyTestNoAccessUser'))
 {
     boolean hasAccess = hasMenuItemAccess(
-        menuItemActionStr(PurchCopilotActionUpdatePurchaseOrder),
+        menuItemActionStr(MyActionUpdatePurchaseOrder),
         MenuItemType::Action);
     this.assertFalse(hasAccess, 'User with no access role should not have access');
 }
 ```
-Files: PurchCopilotGenControllerExecuteActionTest
+Files: ControllerExecuteActionTest
 
 **Convention:** Use `SysTestSecurity` attribute at class level to define personas and roles. Use `SysTestSecurityContext::setCurrentPersona()` in specific tests via `using` block. The persona name must match the one defined in the class-level attribute.
 
@@ -602,7 +602,7 @@ catch
 }
 this.assertTrue(exceptionThrown, 'Invalid JSON should throw an exception');
 ```
-Files: PurchCopilotGenActionPlanParserTest
+Files: ActionPlanParserTest
 
 #### 11b. Typed exception catch
 ```xpp
@@ -617,7 +617,7 @@ catch (Exception::Error)
 }
 this.assertTrue(exceptionThrown, 'Expected error for empty action instance.');
 ```
-Files: PurchCopilotEntityActionTest
+Files: EntityActionTest
 
 #### 11c. Verify NO exception thrown
 ```xpp
@@ -632,7 +632,7 @@ catch
 }
 this.assertFalse(wasExceptionThrown, 'executeAction should not throw when user lacks menu item access');
 ```
-Files: PurchCopilotGenControllerExecuteActionTest
+Files: ControllerExecuteActionTest
 
 **Convention:** X++ tests use a `boolean exceptionThrown` flag + try/catch because there is no `assertThrows()` method in the framework. Always assert the flag's expected value with a descriptive message.
 
@@ -644,7 +644,7 @@ Files: PurchCopilotGenControllerExecuteActionTest
 ```xpp
 ttsbegin;
 
-var taskTemplate = PurchCopilotInboundEmailProcessingTaskTemplate::construct();
+var taskTemplate = MyInboundEmailProcessingTaskTemplate::construct();
 taskTemplate.createOrUpdateTaskForConfiguration(...);
 // ... queries and assertions ...
 delete_from appCopilotAgentTask;
@@ -652,7 +652,7 @@ delete_from appCopilotAgentTask;
 
 ttscommit;
 ```
-Files: PurchCopilotInboundEmailProcessingTaskTests
+Files: EmailProcessingTaskTests
 
 #### 12b. ttsbegin / ttscommit in setUp only
 ```xpp
@@ -664,7 +664,7 @@ public void setUp()
     ttscommit;
 }
 ```
-Files: PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWorkspaceScenarioTest, PurchCopilotInboundEmailE2EApplySuggestionsTestBase
+Files: EmailApplySuggestionTest, EmailWorkspaceScenarioTest, EmailE2EApplySuggestionsTestBase
 
 #### 12c. ttsbegin / ttsabort for read-only tests
 ```xpp
@@ -694,7 +694,7 @@ using (EmailWorkspaceFormAdaptor emailWorkspace = EmailWorkspaceFormAdaptor::ope
 purchaseOrder.reread();
 this.assertEquals(...);
 ```
-Files: PurchCopilotInboundEmailApplySuggestionTest E2E tests
+Files: EmailApplySuggestionTest E2E tests
 
 **Rules:**
 - Wrap data creation in `ttsbegin`/`ttscommit`.
@@ -710,7 +710,7 @@ Form adaptors enable UI-level testing through strongly-typed form proxies.
 
 #### 13a. Using directive for form type providers
 ```xpp
-using EmailWorkspaceFormAdaptor = Microsoft.Dynamics.AX.TypeProviders.FormAdaptors.FormAdaptorTypeProvider@[formStr(PurchCopilotInboundEmailWorkspace)];
+using EmailWorkspaceFormAdaptor = Microsoft.Dynamics.AX.TypeProviders.FormAdaptors.FormAdaptorTypeProvider@[formStr(MyInboundEmailWorkspace)];
 using PurchEditLinesFormAdaptor = Microsoft.Dynamics.AX.TypeProviders.FormAdaptors.FormAdaptorTypeProvider@[formStr(PurchEditLines)];
 using DialogFormAdaptor = Microsoft.Dynamics.AX.TypeProviders.FormAdaptors.FormAdaptorTypeProvider@[formStr(Dialog)];
 using SysBoxFormFormAdaptor = Microsoft.Dynamics.AX.TypeProviders.FormAdaptors.FormAdaptorTypeProvider@[formStr(SysBoxForm)];
@@ -760,8 +760,8 @@ emailWorkspace.LineChangesGrid().markActiveRow();
 ```xpp
 emailWorkspace.ShowChangesOnlyButton().setValue(false);
 emailWorkspace.ExplainAgentActionsCheckbox().validate(false);
-emailWorkspace.PurchCopilotInboundReviewLineMatchingTmp_ItemIdDisplay().setValue(item3.ItemId);
-emailWorkspace.PurchCopilotInboundReviewLineMatchingTmp_Description().validate(enum2Str(PurchCopilotInboundAgentSuggestion::None));
+emailWorkspace.MyInboundReviewLineMatchingTmp_ItemIdDisplay().setValue(item3.ItemId);
+emailWorkspace.MyInboundReviewLineMatchingTmp_Description().validate(enum2Str(MyInboundAgentSuggestion::None));
 ```
 
 #### 13g. Interacting with dialog prompts
@@ -777,13 +777,13 @@ using(DialogFormAdaptor dialog = DialogFormAdaptor::attach())
 }
 ```
 
-Files: PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWorkspaceScenarioTest, PurchCopilotInboundEmailE2EApplySuggestionsTestBase, AgreementClassificationTest
+Files: EmailApplySuggestionTest, EmailWorkspaceScenarioTest, EmailE2EApplySuggestionsTestBase, AgreementClassificationTest
 
 **Rules:**
 - Always use `using` blocks for form adaptors — they auto-close the form.
 - Use `::open()` to open a new form, `::attach()` to attach to a dialog that was triggered.
 - Validate state before clicking action buttons.
-- Use dedicated test helper/validator classes (e.g., `PurchCopilotInboundEmailWorkspaceTestHelper`, `PurchCopilotInboundEmailWorkspaceTestHeaderGroupValidator`) for complex form validations.
+- Use dedicated test helper/validator classes (e.g., `MyInboundEmailWorkspaceTestHelper`, `MyInboundEmailWorkspaceTestHeaderGroupValidator`) for complex form validations.
 
 ---
 
@@ -792,7 +792,7 @@ Files: PurchCopilotInboundEmailApplySuggestionTest, PurchCopilotInboundEmailWork
 For E2E tests with multiple variants (draft PO vs confirmed PO), use an abstract base:
 
 ```xpp
-internal abstract class PurchCopilotInboundEmailE2EApplySuggestionsTestBase extends AtlPurchaseTestCase
+internal abstract class EmailE2EApplySuggestionsTestBase extends AtlPurchaseTestCase
 {
     // Shared constants, fields, setUp, test methods
 
@@ -804,7 +804,7 @@ internal abstract class PurchCopilotInboundEmailE2EApplySuggestionsTestBase exte
 
 Concrete subclasses override the abstract methods:
 ```xpp
-internal final class PurchCopilotInboundEmailE2EDraftPOTest extends PurchCopilotInboundEmailE2EApplySuggestionsTestBase
+internal final class MyInboundEmailE2EDraftPOTest extends EmailE2EApplySuggestionsTestBase
 {
     protected void reactToApplyChangesPrompt()
     {
@@ -826,7 +826,7 @@ internal final class PurchCopilotInboundEmailE2EDraftPOTest extends PurchCopilot
 }
 ```
 
-Files: PurchCopilotInboundEmailE2EApplySuggestionsTestBase
+Files: EmailE2EApplySuggestionsTestBase
 
 **Convention:** Use `protected abstract` methods for the parts that vary. Use `protected` constants and fields. Keep all shared test logic and validation helpers in the base class. Each concrete subclass is small and focused on its variant.
 
@@ -837,17 +837,17 @@ Files: PurchCopilotInboundEmailE2EApplySuggestionsTestBase
 Centralized test data creation via static helper classes:
 
 ```xpp
-// AtlDataPurchCopilotGen provides static factory methods
-AtlDataPurchCopilotGen::cleanupAll();
-AtlDataPurchCopilotGen::createGenTable(TestTableName, TestEntityName);
-AtlDataPurchCopilotGen::createAction(ActionClassName, 'Update PO', 'Description', genTableRecId);
-AtlDataPurchCopilotGen::createColumn(tableRecId, 'PurchId', 'PurchId', PurchCopilotDataType::Text, NoYes::Yes);
-AtlDataPurchCopilotGen::createRelation(EntityLine, headerRecId, lineRecId);
-AtlDataPurchCopilotGen::createActionParameter(actionRecId, 'ColumnName', genTableRecId);
-AtlDataPurchCopilotGen::createEmailStaging(TestEmailId);
+// AtlDataMyGen provides static factory methods
+AtlDataMyGen::cleanupAll();
+AtlDataMyGen::createGenTable(TestTableName, TestEntityName);
+AtlDataMyGen::createAction(ActionClassName, 'Update PO', 'Description', genTableRecId);
+AtlDataMyGen::createColumn(tableRecId, 'PurchId', 'PurchId', MyDataType::Text, NoYes::Yes);
+AtlDataMyGen::createRelation(EntityLine, headerRecId, lineRecId);
+AtlDataMyGen::createActionParameter(actionRecId, 'ColumnName', genTableRecId);
+AtlDataMyGen::createEmailStaging(TestEmailId);
 ```
 
-Files: PurchCopilotGenActionPlanParserTest, PurchCopilotEntityActionTest, PurchCopilotGenControllerExecuteActionTest, PurchCopilotGenTableColumnTest
+Files: ActionPlanParserTest, EntityActionTest, ControllerExecuteActionTest, TableColumnTest
 
 **Convention:** One `AtlData*` class per feature area. It provides:
 - `cleanupAll()` — deletes all test data in correct FK order
@@ -862,15 +862,15 @@ Observed naming patterns across all files:
 
 | Style | Example | Files |
 |-------|---------|-------|
-| `test<What><Expected>` | `testParseCompleteActionPlan`, `testEmailStored` | PurchCopilotGenActionPlanParserTest |
-| `test<Action><Condition>` | `testDeleteAgentTask_VerifyCascadeDelete` | PurchCopilotInboundEmailProcessingTaskTests |
-| `test<MethodName>Returns<What>` | `testHasMenuItemAccessReturnsTrueForDefaultUser` | PurchCopilotGenControllerExecuteActionTest |
-| `<scenario>_<outcome>` (no test prefix) | `insert_withEntityFieldName_autoPopulatesLabelFromReflection` | PurchCopilotGenTableColumnTest |
-| `<action>_<condition>_<result>` (no test prefix) | `confirmEmailE2E_confirmDateHeaderNoLinesMatched_newDateApplied` | PurchCopilotInboundEmailApplySuggestionTest |
-| `<scenario>` (no test prefix, concise) | `changedLinesWithoutExplanation`, `allLinesWithExplanation` | PurchCopilotInboundEmailWorkspaceScenarioTest |
-| `<action>_<scenario>` (E2E) | `draftPO_applyAllChanges`, `draftPO_applySomeChangesAndIgnoreRest` | PurchCopilotInboundEmailE2EApplySuggestionsTestBase |
+| `test<What><Expected>` | `testParseCompleteActionPlan`, `testEmailStored` | ActionPlanParserTest |
+| `test<Action><Condition>` | `testDeleteAgentTask_VerifyCascadeDelete` | EmailProcessingTaskTests |
+| `test<MethodName>Returns<What>` | `testHasMenuItemAccessReturnsTrueForDefaultUser` | ControllerExecuteActionTest |
+| `<scenario>_<outcome>` (no test prefix) | `insert_withEntityFieldName_autoPopulatesLabelFromReflection` | TableColumnTest |
+| `<action>_<condition>_<result>` (no test prefix) | `confirmEmailE2E_confirmDateHeaderNoLinesMatched_newDateApplied` | EmailApplySuggestionTest |
+| `<scenario>` (no test prefix, concise) | `changedLinesWithoutExplanation`, `allLinesWithExplanation` | EmailWorkspaceScenarioTest |
+| `<action>_<scenario>` (E2E) | `draftPO_applyAllChanges`, `draftPO_applySomeChangesAndIgnoreRest` | EmailE2EApplySuggestionsTestBase |
 | `method_case_result` (BDD-style) | `findOrCreateAgreementClassification_Sales` | AgreementClassificationTest |
-| `Given_When_Then` doc comment | Full GIVEN/WHEN/THEN in XML doc comment | PurchCopilotInboundEmailApplySuggestionTest |
+| `Given_When_Then` doc comment | Full GIVEN/WHEN/THEN in XML doc comment | EmailApplySuggestionTest |
 
 **Convention:** The newer Copilot tests prefer the `<scenario>_<condition>_<outcome>` naming without a `test` prefix. Older SCM tests use `test<Description>`. Both are acceptable. The key is that the name reads as a clear description of what's being tested.
 
@@ -885,7 +885,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text;
 ```
-Files: PurchCopilotFollowupTaskTemplateTest
+Files: FollowupTaskTemplateTest
 
 **Convention:** Place `using` directives at the top of the declaration block, before class attributes. Common .NET imports include `Newtonsoft.Json` for JSON manipulation and `System.Text` for string building.
 
@@ -900,7 +900,7 @@ HcmWorkerRecId worker = SysUnitTestData_HCM::createHcmWorker().RecId;
 SysUnitTestData_Invent::createInventTable(item1Id);
 new AgreementXUnitTestSuite().setUp();  // TODO: Optimize for Fixture or similar
 ```
-Files: AgreementClassificationTest, AgreementConfirm_PurchTest, PurchCopilotInboundEmailApplySuggestionTest
+Files: AgreementClassificationTest, AgreementConfirm_PurchTest, EmailApplySuggestionTest
 
 **Convention:** Use `SysUnitTestData_*` static helpers for cross-module test data (HCM workers, inventory items). These are simpler than ATL for basic entity creation.
 
@@ -917,7 +917,7 @@ if (!realDataLoaded)
     return;
 }
 ```
-Files: PurchCopilotGenActionPlanParserTest
+Files: ActionPlanParserTest
 
 **CAUTION:** This pattern is fragile — it silently passes. Prefer explicit failure (see rule in existing patterns). Only use this as a last resort when the test cannot reasonably fail in all environments.
 
@@ -949,6 +949,6 @@ return strFmt(@'{
 }', emailId, summary);
 ```
 
-Files: PurchCopilotFollowupTaskTemplateTest, PurchCopilotGenActionPlanParserTest, PurchCopilotInboundEmailApplySuggestionTest
+Files: FollowupTaskTemplateTest, ActionPlanParserTest, EmailApplySuggestionTest
 
 ---

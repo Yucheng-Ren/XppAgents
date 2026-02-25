@@ -26,7 +26,7 @@
     Suppress individual test-case output; show only the summary.
 
 .EXAMPLE
-    .\Run-XppTests.ps1 -TestClasses "PurchCopilotGenActionPlanParserTest"
+    .\Run-XppTests.ps1 -TestClasses "MyTestClass"
 
 .EXAMPLE
     .\Run-XppTests.ps1 -TestClasses "ClassA,ClassB" -TimeoutMinutes 30 -Parallel

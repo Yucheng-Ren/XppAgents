@@ -259,13 +259,13 @@ finally
 
 **Bad** — using `RecId` suffix for foreign key fields:
 ```xpp
-// In PurchCopilotGenActionPlan table
+// In MyActionPlan table
 AxTableField: EmailRecId  (references Email table's RecId)
 ```
 
 **Good** — use a descriptive name without `RecId` suffix:
 ```xpp
-// In PurchCopilotGenActionPlan table
+// In MyActionPlan table
 AxTableField: Email  (references Email table's RecId)
 ```
 
@@ -292,7 +292,7 @@ while select column where column.Table == tableRecId
 MapEnumerator me = columns.getEnumerator();
 while (me.moveNext())
 {
-    PurchCopilotGenTableColumn col = me.currentValue(); // only value accessed
+    MyTableColumn col = me.currentValue(); // only value accessed
 }
 ```
 
@@ -307,7 +307,7 @@ while select column where column.Table == tableRecId
 ListEnumerator le = columns.getEnumerator();
 while (le.moveNext())
 {
-    PurchCopilotGenTableColumn col = le.current();
+    MyTableColumn col = le.current();
 }
 ```
 

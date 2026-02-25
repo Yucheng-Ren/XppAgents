@@ -8,7 +8,7 @@ This skill describes how to execute X++ SysTest tests from the command line on a
 
 ```powershell
 # Run a single test class
-.\scripts\Run-XppTests.ps1 -TestClasses "PurchCopilotGenActionPlanParserTest"
+.\scripts\Run-XppTests.ps1 -TestClasses "MyTestClass"
 
 # Run multiple test classes
 .\scripts\Run-XppTests.ps1 -TestClasses "ClassA,ClassB"

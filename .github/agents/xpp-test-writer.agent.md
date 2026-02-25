@@ -1,5 +1,5 @@
 ---
-description: "Use this agent when the user wants to write, modify, or implement X++ test classes for Dynamics 365 Finance and Operations.\n\nTrigger phrases include:\n- 'write X++ tests'\n- 'create a test class'\n- 'add unit tests'\n- 'write tests for this class'\n- 'test this X++ method'\n- 'add test coverage'\n- 'create test cases for'\n- 'help me write X++ tests'\n- 'add a test method'\n- 'write integration tests'\n\nExamples:\n- User says 'write tests for PurchCopilotGenActionPlanParser' → invoke this agent to create a test class\n- User says 'add a test method for the new parsing logic' → invoke this agent to add a test to the existing test class\n- User says 'create test cases for the email filter feature' → invoke this agent to implement test methods\n- User says 'add test coverage for createSchema' → invoke this agent to write tests covering that method"
+description: "Use this agent when the user wants to write, modify, or implement X++ test classes for Dynamics 365 Finance and Operations.\n\nTrigger phrases include:\n- 'write X++ tests'\n- 'create a test class'\n- 'add unit tests'\n- 'write tests for this class'\n- 'test this X++ method'\n- 'add test coverage'\n- 'create test cases for'\n- 'help me write X++ tests'\n- 'add a test method'\n- 'write integration tests'\n\nExamples:\n- User says 'write tests for MyActionPlanParser' → invoke this agent to create a test class\n- User says 'add a test method for the new parsing logic' → invoke this agent to add a test to the existing test class\n- User says 'create test cases for the email filter feature' → invoke this agent to implement test methods\n- User says 'add test coverage for createSchema' → invoke this agent to write tests covering that method"
 name: xpp-test-writer
 tools: ['shell', 'read', 'search', 'edit', 'task', 'skill', 'web_search', 'web_fetch', 'ask_user']
 ---
@@ -157,15 +157,37 @@ After delivering the code, provide a summary:
 
 Whenever you **create a new** test class, you MUST also update the corresponding `.rnrproj` project file to include it. Follow the same rules as described in the xpp-coder agent:
 
-1. Find the `.rnrproj` whose `<Model>` matches the test model (e.g., `SCMCopilotTests`).
+1. Find the `.rnrproj` whose `<Model>` matches the test model (e.g., `MyModelTests`).
 2. Add a `<Content Include="AxClass\MyNewTestClass" />` entry in alphabetical order within the `<ItemGroup>`.
 3. Never remove or modify existing entries.
 
 Include the project file update in your summary table.
 
-## Step 7: Run and Verify Tests (MANDATORY)
+## Step 7: Build and Verify (MANDATORY)
 
-After writing or modifying test classes, you MUST run the tests to verify they compile and pass. Do NOT skip this step.
+After writing or modifying test classes, you MUST build the affected models to verify they compile before running tests. Do NOT skip this step.
+
+1. **Read the build skill**: Read `.claude/skills/build-solution/reference.md` for full reference on the build architecture, xppc.exe flags, XML format, and troubleshooting.
+
+2. **Run the build**:
+```powershell
+& "$WORKSPACE/scripts/Build-XppSolution.ps1"
+```
+This auto-discovers and builds all models from the solution. To build a specific model, pass `-Models "<ModelName>"`.
+
+3. **Interpret results**:
+   - Exit code `0` = build succeeded ✓ — proceed to Step 8
+   - Exit code `1` = build errors — you must fix them
+
+4. **On failure — fix and re-build**:
+   - Read `.tmp/build-<model>.xml` to find `<Diagnostic>` elements with `<Severity>Error</Severity>` for error details
+   - Fix the X++ code that caused the compilation errors
+   - Re-run the build until it succeeds
+   - Maximum 3 fix-and-retry cycles. If errors persist after 3 attempts, report the remaining errors to the user with full details
+
+## Step 8: Run and Verify Tests (MANDATORY)
+
+After a successful build, you MUST run the tests to verify they pass. Do NOT skip this step.
 
 1. **Read the test runner skill**: Read `.claude/skills/run-tests/reference.md` for full reference on architecture, XML format, and troubleshooting.
 
@@ -199,7 +221,7 @@ Replace `<TestClassName>` with the name of the test class you just wrote or modi
 ### Important Notes
 - Tests run with `AutoRollback` isolation — they do NOT modify the database permanently
 - First test in a run takes ~15s (AOS kernel init), subsequent tests take ~3s each
-- If you created a **new** test class, it must be included in the `.rnrproj` (Step 6) AND the model must be built before tests can run. If you get "class not found" errors, remind the user to build the model first.
+- If you created a **new** test class, it must be included in the `.rnrproj` (Step 6) AND the model must be built (Step 7) before tests can run.
 
 ## Important Rules
 

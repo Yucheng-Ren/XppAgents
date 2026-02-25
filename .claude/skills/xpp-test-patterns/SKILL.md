@@ -53,7 +53,7 @@ public void testEmailStored()
     RecId actionPlanRecId = parser.parse(this.getCompleteActionPlanJson());
 
     // Assert
-    PurchCopilotGenActionPlan actionPlanTable;
+    MyActionPlan actionPlanTable;
     select firstonly actionPlanTable
         where actionPlanTable.RecId == actionPlanRecId;
 
@@ -73,7 +73,7 @@ public void testEmptyActionPlanArray()
     RecId actionPlanRecId = parser.parse(jsonString);
 
     // Assert
-    PurchCopilotGenActionPlan actionPlanTable;
+    MyActionPlan actionPlanTable;
     select firstonly actionPlanTable
         where actionPlanTable.RecId == actionPlanRecId;
 
@@ -218,10 +218,10 @@ Extract common lookup/assertion patterns into reusable helpers:
 /// <summary>
 /// Finds a cell by field name in a given row and table.
 /// </summary>
-private PurchCopilotGenTableCell findCellByFieldName(RecId _rowRecId, RecId _tableRecId, str _fieldName)
+private MyTableCell findCellByFieldName(RecId _rowRecId, RecId _tableRecId, str _fieldName)
 {
-    PurchCopilotGenTableCell cell;
-    PurchCopilotGenTableColumn column;
+    MyTableCell cell;
+    MyTableColumn column;
 
     select firstonly cell
         where cell.Row == _rowRecId

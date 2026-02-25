@@ -136,6 +136,32 @@ Run-XppTests.ps1                     PowerShell orchestrator
 - Results written to `.tmp/test-results.xml` (SysTestListenerXML format)
 - First test takes ~15s (AOS kernel init), subsequent tests ~3s each
 
+## Build System
+
+An automated CLI build system for X++ models on a D365 OneBox dev box.
+
+```powershell
+# Build all models discovered from the solution (default)
+.\scripts\Build-XppSolution.ps1
+
+# Build a specific model
+.\scripts\Build-XppSolution.ps1 -Models "ModelName"
+
+# Incremental build (faster — only changed elements)
+.\scripts\Build-XppSolution.ps1 -Models "ModelName" -Incremental
+```
+
+**Architecture:**
+```
+Build-XppSolution.ps1                PowerShell orchestrator
+  └─► xppc.exe (X++ Compiler)        Direct compilation — no VS/MSBuild dependency
+        └─► PackagesLocalDirectory   Metadata + assembly output
+```
+
+- Exit code `0` = success, `1` = errors
+- XML build logs written to `.tmp/build-<model>.xml`
+- A full model build takes ~60s; incremental is faster
+
 ## Claude Code Skills
 
 Domain knowledge and task automation packaged as [Claude Code skills](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/skills) in `.claude/skills/`. These are also referenced by the GitHub Copilot agents as shared knowledge.
@@ -143,6 +169,7 @@ Domain knowledge and task automation packaged as [Claude Code skills](https://do
 | Skill | Type | Description |
 |-------|------|-------------|
 | `run-tests` | Task (invokable via `/run-tests`) | Run X++ tests and report results |
+| `build-solution` | Task (invokable via `/build-solution`) | Build X++ models and report errors |
 | `xpp-patterns` | Reference (auto-loaded) | X++ coding patterns, rules, and anti-patterns |
 | `xpp-test-patterns` | Reference (auto-loaded) | X++ test writing patterns (AAA, naming, setup) |
 | `xpp-solution-paths` | Reference (auto-loaded) | Solution/source path resolution and caching |
@@ -185,12 +212,14 @@ XppAgents/
 │   ├── CLAUDE.md                # Claude Code project instructions
 │   └── skills/                  # Claude Code skills
 │       ├── run-tests/           # Test runner skill (SKILL.md + reference.md + lessons.md)
+│       ├── build-solution/      # Build skill (SKILL.md + reference.md)
 │       ├── xpp-patterns/        # X++ coding patterns (SKILL.md)
 │       ├── xpp-test-patterns/   # X++ test patterns (SKILL.md + reference.md)
 │       ├── xpp-solution-paths/  # Path resolution (SKILL.md)
 │       └── less-vrtt/           # LESS/VRTT docs (SKILL.md)
-├── scripts/                     # CLI test runner
-│   ├── Run-XppTests.ps1         # PowerShell orchestrator
+├── scripts/                     # CLI build & test tools
+│   ├── Build-XppSolution.ps1    # X++ build orchestrator (xppc.exe wrapper)
+│   ├── Run-XppTests.ps1         # X++ test orchestrator
 │   ├── SysTestLauncher.exe      # C# wrapper (bypasses Console.ReadKey)
 │   └── SysTestLauncher.cs       # Source for the launcher
 ├── frontend/                    # React dashboard app (Vite)
@@ -211,6 +240,7 @@ XppAgents/
     ├── code-review-result.json
     ├── accepted-fixes.json
     ├── test-results.xml
+    ├── build-<model>.xml
     └── solution-summary.md
 ```
 

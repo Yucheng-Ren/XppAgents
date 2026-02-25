@@ -66,6 +66,22 @@ This project has a working CLI test runner for X++ SysTests. Full docs in the `/
 - After writing or modifying X++ test classes, **run the tests** to verify correctness
 - Use `/run-tests <TestClassName>` skill for guided test execution
 
+## X++ Build
+
+This project has a CLI build system using `xppc.exe` (X++ Compiler). Full docs in the `/build-solution` skill (`.claude/skills/build-solution/`).
+
+**Quick usage:**
+```powershell
+.\scripts\Build-XppSolution.ps1 -Models "ModelName"
+```
+
+- Uses `xppc.exe` directly — no MSBuild/Visual Studio dependency
+- Builds entire models (classes, tables, forms, queries, etc.)
+- XML build logs written to `.tmp/build-<model>.xml`
+- Exit code 0 = success, 1 = errors
+- After writing or modifying X++ code, **build the model** to verify it compiles
+- Use `/build-solution <ModelName>` skill for guided builds
+
 ## Skills
 
 All domain knowledge lives in `.claude/skills/` as Claude Code skills:
@@ -73,6 +89,7 @@ All domain knowledge lives in `.claude/skills/` as Claude Code skills:
 | Skill | Type | Description |
 |-------|------|-------------|
 | `run-tests` | Task (invokable) | Run X++ tests via `/run-tests <ClassName>` |
+| `build-solution` | Task (invokable) | Build X++ models via `/build-solution <Model>` |
 | `xpp-patterns` | Reference (auto) | X++ coding patterns and review rules |
 | `xpp-test-patterns` | Reference (auto) | X++ test writing patterns (AAA, naming, setup) |
 | `xpp-solution-paths` | Reference (auto) | Solution/source path resolution and caching |

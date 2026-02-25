@@ -348,7 +348,7 @@ Whenever you **create a new** X++ object (class, table, form, enum, EDT, securit
 
 ### How to determine which project to update
 
-During Step 1 you parsed the `.sln` and all `.rnrproj` files. Each `.rnrproj` has a `<Model>` property (e.g., `<Model>SCMCopilot</Model>` or `<Model>SCMCopilotTests</Model>`). The model name determines the subfolder under the source code path where the file lives.
+During Step 1 you parsed the `.sln` and all `.rnrproj` files. Each `.rnrproj` has a `<Model>` property (e.g., `<Model>MyModel</Model>` or `<Model>MyModelTests</Model>`). The model name determines the subfolder under the source code path where the file lives.
 
 When you create a new file at:
 ```
@@ -366,9 +366,9 @@ The format is:
 <Content Include="<ObjectType>\<ObjectName>" />
 ```
 
-For example, to add a new class `PurchCopilotMyNewFeature`:
+For example, to add a new class `MyNewFeature`:
 ```xml
-<Content Include="AxClass\PurchCopilotMyNewFeature" />
+<Content Include="AxClass\MyNewFeature" />
 ```
 
 **Step-by-step:**
@@ -397,20 +397,20 @@ For example, to add a new class `PurchCopilotMyNewFeature`:
 **Example**: If the project file currently has:
 ```xml
 <ItemGroup>
-    <Content Include="AxClass\PurchCopilotController" />
-    <Content Include="AxClass\PurchCopilotService" />
-    <Content Include="AxTable\PurchCopilotGenAction" />
+    <Content Include="AxClass\MyController" />
+    <Content Include="AxClass\MyService" />
+    <Content Include="AxTable\MyGenAction" />
 </ItemGroup>
 ```
 
-And you create a new class `PurchCopilotHelper` and a new table `PurchCopilotLog`, it becomes:
+And you create a new class `MyHelper` and a new table `MyLog`, it becomes:
 ```xml
 <ItemGroup>
-    <Content Include="AxClass\PurchCopilotController" />
-    <Content Include="AxClass\PurchCopilotHelper" />
-    <Content Include="AxClass\PurchCopilotService" />
-    <Content Include="AxTable\PurchCopilotGenAction" />
-    <Content Include="AxTable\PurchCopilotLog" />
+    <Content Include="AxClass\MyController" />
+    <Content Include="AxClass\MyHelper" />
+    <Content Include="AxClass\MyService" />
+    <Content Include="AxTable\MyGenAction" />
+    <Content Include="AxTable\MyLog" />
 </ItemGroup>
 ```
 
@@ -421,7 +421,35 @@ In your summary table (Step 4), include a row for each project file update:
 | File | Action | Description |
 |------|--------|-------------|
 | AxClass/MyNewClass.xml | Created | New helper class |
-| SCM Copilot.rnrproj | Updated | Added AxClass\MyNewClass to project |
+| MyProject.rnrproj | Updated | Added AxClass\MyNewClass to project |
+
+## Step 6: Build and Verify (MANDATORY)
+
+After writing or modifying X++ code, you MUST build the affected models to verify everything compiles. Do NOT skip this step.
+
+1. **Read the build skill**: Read `.claude/skills/build-solution/reference.md` for full reference on the build architecture, xppc.exe flags, XML format, and troubleshooting.
+
+2. **Run the build**:
+```powershell
+& "$WORKSPACE/scripts/Build-XppSolution.ps1"
+```
+This auto-discovers and builds all models from the solution. To build a specific model, pass `-Models "<ModelName>"`.
+
+3. **Interpret results**:
+   - Exit code `0` = build succeeded ✓
+   - Exit code `1` = build errors — you must fix them
+
+4. **On failure — fix and re-build**:
+   - Read `.tmp/build-<model>.xml` to find `<Diagnostic>` elements with `<Severity>Error</Severity>` for error details
+   - Fix the X++ code that caused the compilation errors
+   - Re-run the build until it succeeds
+   - Maximum 3 fix-and-retry cycles. If errors persist after 3 attempts, report the remaining errors to the user with full details
+
+5. **Report results** in a summary:
+
+| Model | Status | Errors | Warnings | Time |
+|-------|--------|--------|----------|------|
+| <name> | ✅ / ❌ | N | N | Xs |
 
 ## Common Task Templates
 

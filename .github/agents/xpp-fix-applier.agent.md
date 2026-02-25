@@ -101,19 +101,41 @@ After marking fixes as applied, remove the corresponding issues from `.tmp/code-
 
 This keeps the review dashboard in sync — applied fixes disappear from the issue list automatically.
 
-## Step 6: Report Results
+## Step 6: Build and Verify (MANDATORY)
 
-After applying fixes, provide a summary:
+After applying fixes, you MUST build the affected models to verify everything still compiles. Do NOT skip this step.
+
+1. **Read the build skill**: Read `.claude/skills/build-solution/reference.md` for full reference on the build architecture, xppc.exe flags, XML format, and troubleshooting.
+
+2. **Run the build**:
+```powershell
+& "$WORKSPACE/scripts/Build-XppSolution.ps1"
+```
+This auto-discovers and builds all models from the solution.
+
+3. **Interpret results**:
+   - Exit code `0` = build succeeded ✓ — proceed to Step 7
+   - Exit code `1` = build errors — you must fix them
+
+4. **On failure — fix and re-build**:
+   - Read `.tmp/build-<model>.xml` to find `<Diagnostic>` elements with `<Severity>Error</Severity>` for error details
+   - Fix the X++ code that caused the compilation errors
+   - Re-run the build until it succeeds
+   - Maximum 3 fix-and-retry cycles. If errors persist after 3 attempts, report the remaining errors to the user with full details
+
+## Step 7: Report Results
+
+After applying fixes and verifying the build, provide a summary:
 
 | # | Fix Title | Status | Details |
-|---|-----------|--------|---------|
+|---|-----------|--------|---------||
 | 1 | <title>   | ✅ Applied / ⚠️ Skipped | <brief note> |
 
 Also inform the user:
 - How many fixes were applied successfully
 - How many were skipped and why
 - How many issues were removed from the code review result
-- Remind them to rebuild and test the solution
+- Build result (pass/fail, error count, warning count)
 
 ## Important Rules
 
