@@ -25,3 +25,29 @@
 
 ### Key Pattern
 When facing a "wall" (multiple failed approaches), STOP and re-analyze the root cause. The `Console.ReadKey()` problem was ultimately solved by understanding that `WriteConsoleInput` works on shared console handles, not by trying to avoid the prompt.
+
+## New Test Class Deployment (2026-02-26)
+
+### Test runner finds 0 tests for a new class
+- **Root cause**: The XML class file exists in the git overlay but NOT in PackagesLocalDirectory. The build script uses `-metadata=$PackagesDir` by default, so xppc compiles from PackagesLocalDirectory. If the file is missing there, the class isn't compiled into the assembly, and the test runner can't discover it.
+- **Fix**: Copy the XML file from git overlay to PackagesLocalDirectory:
+  ```powershell
+  Copy-Item "<gitOverlayPath>\<Model>\<Model>\AxClass\MyTest.xml" `
+            "<PackagesDir>\<Model>\<Model>\AxClass\MyTest.xml" -Force
+  ```
+  Then rebuild the model.
+
+### SysTestExpectedError not available
+- The `[SysTestExpectedError('', false)]` attribute does not exist in all D365 environments. Compilation fails with "class SysTestExpectedError not found".
+- **Fix**: Replace with a try/catch pattern: wrap the failing call in `try { ... } catch (Exception::Error) { exceptionThrown = true; }`, then `assertTrue(exceptionThrown)`.
+
+### New class must be in .rnrproj AND PackagesLocalDirectory
+- Three steps before a new test class can run: (1) add `<Content Include>` to `.rnrproj`, (2) copy XML to PackagesLocalDirectory, (3) build the model. Missing any step → test runner returns 0 tests.
+
+### End-to-end checklist for new test files
+1. Create XML in git overlay source path
+2. Add to `.rnrproj` in alphabetical order
+3. Copy XML to PackagesLocalDirectory
+4. Build: `.\scripts\Build-XppSolution.ps1 -Models "<TestModel>"`
+5. Run: `.\scripts\Run-XppTests.ps1 -TestClasses "<TestClassName>"`
+6. If 0 tests found, check step 3 first — most common failure.

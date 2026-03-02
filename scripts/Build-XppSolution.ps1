@@ -1,11 +1,13 @@
 <#
 .SYNOPSIS
-    Builds X++ models using xppc.exe (X++ Compiler) on a D365 OneBox dev box.
+    Builds X++ models using xppc.exe (X++ Compiler) and runs Best Practice
+    checks via xppbp.exe on a D365 OneBox dev box.
 
 .DESCRIPTION
-    Compiles one or more X++ models by invoking xppc.exe directly.
+    Compiles one or more X++ models by invoking xppc.exe directly, then
+    optionally runs Best Practice (BP) analysis via xppbp.exe.
     This bypasses MSBuild/Visual Studio entirely and works from the command line.
-    Produces an XML build log per model and reports errors/warnings.
+    Produces XML build and BP logs per model and reports errors/warnings/BP violations.
 
 .PARAMETER Models
     Comma-separated list of model names to compile, or "all" (default) to
@@ -22,6 +24,9 @@
 
 .PARAMETER Verbose
     When set, shows detailed phase timing from xppc.exe.
+
+.PARAMETER SkipBP
+    Skip Best Practice (xppbp.exe) checks after compilation.
 
 .PARAMETER Quiet
     Suppress individual diagnostic output; show only the summary.
@@ -54,6 +59,8 @@ param(
 
     [switch]$ShowVerbose,
 
+    [switch]$SkipBP,
+
     [switch]$Quiet
 )
 
@@ -80,6 +87,12 @@ $xppcExe = Join-Path $PackagesDir "bin\xppc.exe"
 if (-not (Test-Path $xppcExe)) {
     Write-Error "xppc.exe not found at: $xppcExe"
     exit 1
+}
+
+$xppbpExe = Join-Path $PackagesDir "bin\xppbp.exe"
+if (-not $SkipBP -and -not (Test-Path $xppbpExe)) {
+    Write-Warning "xppbp.exe not found at: $xppbpExe — skipping Best Practice checks."
+    $SkipBP = $true
 }
 
 # Read solution dir from .env.json if not specified
@@ -133,6 +146,64 @@ $tmpDir = Join-Path $workspaceRoot ".tmp"
 if (-not (Test-Path $tmpDir)) { New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null }
 #endregion
 
+#region --- Sort models by dependency order ---
+# Read each model's ModuleReferences from its Descriptor XML and topologically
+# sort so that dependencies are built before the models that depend on them.
+if ($modelList.Count -gt 1) {
+    $modelSet = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]$modelList, [System.StringComparer]::OrdinalIgnoreCase)
+    # Build adjacency: model -> list of models in our set that it depends on
+    $deps = @{}
+    foreach ($m in $modelList) {
+        $deps[$m] = @()
+        $descDir = Join-Path $PackagesDir "$m\Descriptor"
+        if (Test-Path $descDir) {
+            $descFile = Get-ChildItem $descDir -Filter "*.xml" | Select-Object -First 1
+            if ($descFile) {
+                $descXml = [xml](Get-Content $descFile.FullName -Raw)
+                $refs = $descXml.AxModelInfo.ModuleReferences.string
+                if ($refs) {
+                    $deps[$m] = @($refs | Where-Object { $modelSet.Contains($_) })
+                }
+            }
+        }
+    }
+
+    # Topological sort (Kahn's algorithm)
+    $inDegree = @{}
+    foreach ($m in $modelList) { $inDegree[$m] = 0 }
+    foreach ($m in $modelList) {
+        foreach ($dep in $deps[$m]) {
+            $inDegree[$dep] = ($inDegree[$dep]) # ensure key exists
+            $inDegree[$m]++
+        }
+    }
+
+    $queue   = [System.Collections.Queue]::new()
+    $sorted  = @()
+    foreach ($m in $modelList) {
+        if ($inDegree[$m] -eq 0) { $queue.Enqueue($m) }
+    }
+    while ($queue.Count -gt 0) {
+        $current = $queue.Dequeue()
+        $sorted += $current
+        # For each model that depends on $current, decrement in-degree
+        foreach ($m in $modelList) {
+            if ($deps[$m] -contains $current) {
+                $inDegree[$m]--
+                if ($inDegree[$m] -eq 0) { $queue.Enqueue($m) }
+            }
+        }
+    }
+
+    if ($sorted.Count -eq $modelList.Count) {
+        $modelList = $sorted
+    } else {
+        Write-Warning "Could not fully resolve dependency order (possible circular refs). Building in original order."
+    }
+}
+#endregion
+
 #region --- Build models ---
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host " X++ Build" -ForegroundColor Cyan
@@ -144,9 +215,11 @@ if ($Incremental) { Write-Host "Mode         : Incremental" }
 Write-Host ""
 
 $overallStartTime = Get-Date
-$totalErrors   = 0
-$totalWarnings = 0
-$modelResults  = @()
+$totalErrors     = 0
+$totalWarnings   = 0
+$totalBPWarnings = 0
+$totalBPErrors   = 0
+$modelResults    = @()
 $overallExitCode = 0
 
 foreach ($model in $modelList) {
@@ -204,13 +277,14 @@ foreach ($model in $modelList) {
         $diags = $xml.SelectNodes('//Diagnostic')
         foreach ($diag in $diags) {
             switch ($diag.Severity) {
-                "Error" {
+                { $_ -in @('Error', 'Fatal') } {
                     $errors++
                     $errorDetails += @{
-                        Path    = $diag.Path
-                        Message = $diag.Message
-                        Line    = $diag.Line
-                        Column  = $diag.Column
+                        Path     = $diag.Path
+                        Message  = $diag.Message
+                        Line     = $diag.Line
+                        Column   = $diag.Column
+                        Severity = $diag.Severity
                     }
                 }
                 "Warning" { $warnings++ }
@@ -218,28 +292,123 @@ foreach ($model in $modelList) {
         }
     }
 
-    $totalErrors   += $errors
-    $totalWarnings += $warnings
+    # --- Best Practice checks ---
+    $bpWarnings = 0
+    $bpErrors   = 0
+    $bpDetails  = @()
+    $bpElapsed  = 0
+
+    if (-not $SkipBP) {
+        $bpXmlLog = Join-Path $tmpDir "bp-$model.xml"
+        $bpStdoutLog = Join-Path $tmpDir "bp-$model-stdout.log"
+        $bpStderrLog = Join-Path $tmpDir "bp-$model-stderr.log"
+
+        foreach ($f in @($bpXmlLog, $bpStdoutLog, $bpStderrLog)) {
+            Remove-Item $f -Force -ErrorAction SilentlyContinue
+        }
+
+        # Resolve model name from descriptor (may differ from module name)
+        $descriptorDir = Join-Path $PackagesDir "$model\Descriptor"
+        $bpModelName = $model  # default: same as module
+        if (Test-Path $descriptorDir) {
+            $descFile = Get-ChildItem $descriptorDir -Filter "*.xml" | Select-Object -First 1
+            if ($descFile) {
+                $descXml = [xml](Get-Content $descFile.FullName -Raw)
+                $descName = $descXml.AxModelInfo.Name
+                if ($descName) { $bpModelName = $descName }
+            }
+        }
+
+        $bpArgs = @(
+            "-metadata=$PackagesDir",
+            "-module=$model",
+            "-model=$bpModelName",
+            "-packagesRoot=$PackagesDir",
+            "-all",
+            "-xmlLog=$bpXmlLog"
+        )
+
+        Write-Host "Running BP checks..." -ForegroundColor Yellow
+        $bpStartTime = Get-Date
+
+        $bpProc = Start-Process -FilePath $xppbpExe `
+            -ArgumentList $bpArgs `
+            -RedirectStandardOutput $bpStdoutLog `
+            -RedirectStandardError  $bpStderrLog `
+            -PassThru -NoNewWindow -Wait
+
+        $bpElapsed = [Math]::Round(((Get-Date) - $bpStartTime).TotalSeconds, 1)
+
+        # Parse BP XML results (same schema as compiler output)
+        if (Test-Path $bpXmlLog) {
+            [xml]$bpXml = Get-Content $bpXmlLog -Raw
+            $bpDiags = $bpXml.SelectNodes('//Diagnostic')
+            foreach ($bpDiag in $bpDiags) {
+                switch ($bpDiag.Severity) {
+                    { $_ -in @('Error', 'Fatal') } {
+                        $bpErrors++
+                        $bpDetails += @{
+                            Path     = $bpDiag.Path
+                            Message  = $bpDiag.Message
+                            Moniker  = $bpDiag.Moniker
+                            Severity = $bpDiag.Severity
+                        }
+                    }
+                    "Warning" {
+                        $bpWarnings++
+                        $bpDetails += @{
+                            Path     = $bpDiag.Path
+                            Message  = $bpDiag.Message
+                            Moniker  = $bpDiag.Moniker
+                            Severity = "Warning"
+                        }
+                    }
+                }
+            }
+        }
+
+        # Show BP stderr if any
+        if (Test-Path $bpStderrLog) {
+            $bpErrContent = Get-Content $bpStderrLog -ErrorAction SilentlyContinue
+            if ($bpErrContent) {
+                Write-Host "--- BP stderr ---" -ForegroundColor Red
+                $bpErrContent | Select-Object -Last 5
+            }
+        }
+    }
+
+    $totalBPWarnings += $bpWarnings
+    $totalBPErrors   += $bpErrors
+    $totalErrors     += $errors + $bpErrors
+    $totalWarnings   += $warnings
 
     # Determine success
-    $buildOk = ($exitCode -eq 0) -and ($errors -eq 0)
+    $buildOk = ($exitCode -eq 0) -and ($errors -eq 0) -and ($bpErrors -eq 0)
     if (-not $buildOk) { $overallExitCode = 1 }
 
     $statusColor = if ($buildOk) { "Green" } else { "Red" }
     $statusText  = if ($buildOk) { "SUCCEEDED" } else { "FAILED" }
 
-    $modelResults += @{
-        Model    = $model
-        Status   = $statusText
-        Errors   = $errors
-        Warnings = $warnings
-        Elapsed  = $elapsed
-        ExitCode = $exitCode
+    $bpSuffix = ""
+    if (-not $SkipBP -and ($bpWarnings -gt 0 -or $bpErrors -gt 0)) {
+        $bpSuffix = ", BP: $bpErrors errors/$bpWarnings warnings"
     }
 
-    Write-Host "$statusText in ${elapsed}s (exit code: $exitCode, errors: $errors, warnings: $warnings)" -ForegroundColor $statusColor
+    $modelResults += @{
+        Model      = $model
+        Status     = $statusText
+        Errors     = $errors
+        Warnings   = $warnings
+        BPErrors   = $bpErrors
+        BPWarnings = $bpWarnings
+        Elapsed    = $elapsed
+        BPElapsed  = $bpElapsed
+        ExitCode   = $exitCode
+    }
 
-    # Show errors
+    Write-Host "$statusText in ${elapsed}s (exit code: $exitCode, errors: $errors, warnings: $warnings$bpSuffix)" -ForegroundColor $statusColor
+
+    # Show compile errors
     if ($errors -gt 0 -and -not $Quiet) {
         Write-Host ""
         $shown = 0
@@ -248,8 +417,26 @@ foreach ($model in $modelList) {
                 Write-Host "  ... and $($errors - 20) more errors (see $xmlLog)" -ForegroundColor DarkRed
                 break
             }
-            Write-Host "  ERROR: $($err.Path)" -ForegroundColor Red
+            Write-Host "  ERROR [$($err.Severity)]: $($err.Path)" -ForegroundColor Red
             Write-Host "         $($err.Message) (line $($err.Line), col $($err.Column))" -ForegroundColor DarkRed
+            $shown++
+        }
+    }
+
+    # Show BP violations
+    if ($bpDetails.Count -gt 0 -and -not $Quiet) {
+        Write-Host ""
+        $shown = 0
+        foreach ($bp in $bpDetails) {
+            if ($shown -ge 30) {
+                $remaining = $bpDetails.Count - 30
+                Write-Host "  ... and $remaining more BP issues (see $(Join-Path $tmpDir "bp-$model.xml"))" -ForegroundColor DarkYellow
+                break
+            }
+            $bpColor = if ($bp.Severity -in @('Error','Fatal')) { "Red" } else { "DarkYellow" }
+            $bpLabel = if ($bp.Severity -in @('Error','Fatal')) { "BP ERROR" } else { "BP WARN" }
+            Write-Host "  ${bpLabel}: [$($bp.Moniker)] $($bp.Path)" -ForegroundColor $bpColor
+            Write-Host "         $($bp.Message)" -ForegroundColor $bpColor
             $shown++
         }
     }
@@ -277,13 +464,21 @@ Write-Host "========================================" -ForegroundColor Cyan
 
 foreach ($r in $modelResults) {
     $color = if ($r.Status -eq "SUCCEEDED") { "Green" } else { "Red" }
-    Write-Host "  $($r.Model): $($r.Status) ($($r.Elapsed)s, $($r.Errors) errors, $($r.Warnings) warnings)" -ForegroundColor $color
+    $bpInfo = ""
+    if (-not $SkipBP -and ($r.BPErrors -gt 0 -or $r.BPWarnings -gt 0)) {
+        $bpInfo = ", BP: $($r.BPErrors) errors/$($r.BPWarnings) warnings"
+    }
+    Write-Host "  $($r.Model): $($r.Status) ($($r.Elapsed)s, $($r.Errors) errors, $($r.Warnings) warnings$bpInfo)" -ForegroundColor $color
 }
 
 Write-Host ""
-$summaryColor = if ($totalErrors -gt 0) { "Red" } elseif ($totalWarnings -gt 0) { "Yellow" } else { "Green" }
-Write-Host "Total: $($modelList.Count) model(s), $totalErrors error(s), $totalWarnings warning(s) in ${overallElapsed}s" -ForegroundColor $summaryColor
-Write-Host "Build logs: $tmpDir\build-*.xml"
+$summaryColor = if ($totalErrors -gt 0) { "Red" } elseif ($totalWarnings -gt 0 -or $totalBPWarnings -gt 0) { "Yellow" } else { "Green" }
+$bpSummary = ""
+if (-not $SkipBP) {
+    $bpSummary = ", $totalBPErrors BP error(s), $totalBPWarnings BP warning(s)"
+}
+Write-Host "Total: $($modelList.Count) model(s), $totalErrors error(s), $totalWarnings warning(s)$bpSummary in ${overallElapsed}s" -ForegroundColor $summaryColor
+Write-Host "Build logs: $tmpDir\build-*.xml$(if(-not $SkipBP){', bp-*.xml'})"
 Write-Host ""
 #endregion
 

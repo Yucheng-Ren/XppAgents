@@ -225,6 +225,25 @@ SysTestLauncher should handle this. If it doesn't, the key injector may not have
 ### No XML output file created
 SysTestConsole only writes the XML after all tests complete. If it crashes mid-run, no XML is produced. Check `.tmp/systest-stdout.log` for error messages.
 
+### Test runner finds 0 tests for a new class
+The new test class XML file likely only exists in the git overlay (e.g., `C:\Users\<user>\git\...\Source\Metadata`) but was NOT copied to PackagesLocalDirectory. The build compiles from PackagesLocalDirectory by default, so the class isn't in the assembly.
+
+**Fix:**
+1. Copy the XML file to `<PackagesDir>\<Model>\<Model>\AxClass\<ClassName>.xml`
+2. Rebuild the model: `.\scripts\Build-XppSolution.ps1 -Models "<Model>"`
+3. Re-run the tests
+
+Also verify the class was added to the `.rnrproj` project file (see xpp-test-patterns skill).
+
+### SysTestExpectedError compilation error
+`[SysTestExpectedError]` is not available in all D365 environments. Replace with a try/catch pattern:
+```xpp
+boolean exceptionThrown = false;
+try { myClass.doSomething(); }
+catch (Exception::Error) { exceptionThrown = true; }
+this.assertTrue(exceptionThrown, 'Expected exception');
+```
+
 ---
 
 ## Approaches That Do NOT Work

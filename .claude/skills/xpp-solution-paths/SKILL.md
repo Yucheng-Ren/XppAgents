@@ -98,3 +98,23 @@ Use the **source code path** + **model name** to locate actual source files:
 - Menu Items: `<SourcePath>/<ModelName>/AxMenuItemAction/<Name>.xml`
 
 If the exact path is unclear, search for the file by name under the source code path.
+
+## Dual-Path Architecture: Source vs Deploy
+
+On D365 OneBox dev boxes, there are typically **two** directories containing X++ metadata:
+
+| Path | Purpose | Typical Value |
+|------|---------|---------------|
+| **sourceCodePath** (git overlay) | Where developers edit files, version-controlled | `C:\Users\<user>\git\ApplicationSuite\Source\Metadata` |
+| **PackagesLocalDirectory** (deploy dir) | Where AOS runtime and xppc.exe read metadata by default | `C:\AosService\PackagesLocalDirectory` |
+
+These paths are configured in:
+- `.env.json` → `sourceCodePath` (git overlay)
+- `C:\AosService\WebRoot\web.config` → `Aos.MetadataDirectory` (points to git overlay)
+- `C:\AosService\WebRoot\web.config` → `Aos.PackageDirectory` (points to PackagesLocalDirectory)
+
+**Why this matters for new files**: When you create a new X++ class/table/form in the git source overlay, the build script and test runner (which use PackagesLocalDirectory by default) **cannot find it** until you either:
+1. Copy the file to the matching path under PackagesLocalDirectory, OR
+2. Override the `-metadata` flag to point to the git overlay
+
+See the build-solution skill reference for detailed instructions on both approaches.

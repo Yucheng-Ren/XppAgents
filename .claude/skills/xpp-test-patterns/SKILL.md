@@ -239,3 +239,101 @@ private MyTableCell findCellByFieldName(RecId _rowRecId, RecId _tableRecId, str 
 ---
 
 <!-- Add new test patterns below this line -->
+## Adding New Test Class Files
+
+When creating a **new** test class (not modifying an existing one), follow this end-to-end checklist:
+
+### 1. Create the XML file
+
+Save the test class XML to the correct location under the test model's source path:
+```
+<sourceCodePath>/<TestModel>/<TestModel>/AxClass/<TestClassName>.xml
+```
+
+For example:
+```
+C:\Users\<user>\git\ApplicationSuite\Source\Metadata\SCMCopilotTests\SCMCopilotTests\AxClass\MyNewTest.xml
+```
+
+### 2. Add to `.rnrproj` project file
+
+Find the `.rnrproj` whose `<Model>` matches the test model and add a `<Content Include>` entry in **alphabetical order** within the `<ItemGroup>`:
+
+```xml
+<Content Include="AxClass\ExistingTestBefore" />
+<Content Include="AxClass\MyNewTest" />          <!-- new entry -->
+<Content Include="AxClass\ExistingTestAfter" />
+```
+
+**Rules:**
+- Never remove or modify existing entries.
+- Insert in strict alphabetical order among the existing `AxClass` entries.
+- If you also created a testable wrapper class (e.g., `MyClassTestable`), add that entry too.
+
+### 3. Copy to PackagesLocalDirectory
+
+If source files live in a git overlay path that differs from PackagesLocalDirectory, copy the new XML file(s) to the deploy directory:
+
+```powershell
+$src = "<sourceCodePath>\<TestModel>\<TestModel>\AxClass\MyNewTest.xml"
+$dst = "<PackagesDir>\<TestModel>\<TestModel>\AxClass\MyNewTest.xml"
+Copy-Item $src $dst -Force
+```
+
+This is necessary because the build script passes `-metadata=$PackagesDir` by default. See the build-solution skill for the full "Git Overlay vs PackagesLocalDirectory" explanation.
+
+### 4. Build the test model
+
+```powershell
+.\scripts\Build-XppSolution.ps1 -Models "<TestModel>"
+```
+
+The new class must compile before the test runner can discover and execute it.
+
+### 5. Run the tests
+
+```powershell
+.\scripts\Run-XppTests.ps1 -TestClasses "<TestClassName>"
+```
+
+If the test runner finds 0 tests, the most common cause is the XML file missing from PackagesLocalDirectory (step 3).
+
+---
+
+## SysTestExpectedError Unavailability
+
+The `[SysTestExpectedError]` attribute is **not available** in all D365 environments. If compilation fails with "class SysTestExpectedError not found", replace it with a try/catch pattern:
+
+**Does NOT work in some environments:**
+```xpp
+[SysTestMethod, SysTestExpectedError('', false)]
+public void testThrowsOnInvalidInput()
+{
+    myClass.doSomething();
+}
+```
+
+**Use instead — try/catch pattern:**
+```xpp
+[SysTestMethod]
+public void testThrowsOnInvalidInput()
+{
+    // Arrange
+    boolean exceptionThrown = false;
+
+    // Act
+    try
+    {
+        myClass.doSomething();
+    }
+    catch (Exception::Error)
+    {
+        exceptionThrown = true;
+    }
+
+    // Assert
+    this.assertTrue(exceptionThrown, 'Expected an exception to be thrown');
+}
+```
+
+---
