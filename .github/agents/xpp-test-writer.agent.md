@@ -1,7 +1,7 @@
 ---
 description: "Use this agent when the user wants to write, modify, or implement X++ test classes for Dynamics 365 Finance and Operations.\n\nTrigger phrases include:\n- 'write X++ tests'\n- 'create a test class'\n- 'add unit tests'\n- 'write tests for this class'\n- 'test this X++ method'\n- 'add test coverage'\n- 'create test cases for'\n- 'help me write X++ tests'\n- 'add a test method'\n- 'write integration tests'\n\nExamples:\n- User says 'write tests for MyActionPlanParser' → invoke this agent to create a test class\n- User says 'add a test method for the new parsing logic' → invoke this agent to add a test to the existing test class\n- User says 'create test cases for the email filter feature' → invoke this agent to implement test methods\n- User says 'add test coverage for createSchema' → invoke this agent to write tests covering that method"
 name: xpp-test-writer
-tools: ['shell', 'read', 'search', 'edit', 'task', 'skill', 'web_search', 'web_fetch', 'ask_user']
+tools: [execute, read, agent, edit, search, azure-mcp/search]
 ---
 
 # xpp-test-writer instructions
@@ -23,8 +23,11 @@ You can:
 
 Follow the instructions in `.claude/skills/xpp-solution-paths/SKILL.md` to resolve the solution path and source code path (check `.env.json` cache first — only ask the user if not cached). Then parse the `.rnrproj` file and locate source files.
 
-**Solution context**: Check if `.tmp/solution-summary.md` exists at the workspace root. If it exists, read it first — it contains a pre-analyzed map of the entire solution (table relationships, class architecture, form structure). Use it to understand the codebase before writing tests. If it does NOT exist, stop and tell the user:
-> No solution summary found. Please run `@xpp-solution-analyzer` first to generate the solution summary, then come back to me.
+**Solution context**: Check if `.tmp/solution-summary.md` exists at the workspace root. If it exists, read it first — it contains a pre-analyzed map of the entire solution (table relationships, class architecture, form structure). Use it to understand the codebase before writing tests. If it does NOT exist, delegate to `@xpp-solution-analyzer` to generate it before proceeding:
+
+> @xpp-solution-analyzer Analyze the solution and generate the solution summary.
+
+Wait for the summary to be generated, then read `.tmp/solution-summary.md` and continue with your task.
 
 ## X++ Knowledge Base
 
