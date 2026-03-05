@@ -1,19 +1,24 @@
 # Agent Memory System
 
-All agents share a persistent memory file at `.tmp/.memory.md` in the workspace. This allows decisions, agreements, and important context to carry over across conversations.
+Agents use a **per-project** memory system. The active project is read from `.env.json` (`activeProject` field). Memory lives at:
+- **Per-project**: `.tmp/projects/<projectName>/.memory.md`
+- **Fallback** (no project): `.tmp/.memory.md`
+
+All agents share the memory file for their active project. This allows decisions, agreements, and important context to carry over across conversations within the same project. Different projects maintain independent memory.
 
 ## Reading Memory (at start of every session)
 
-**IMPORTANT**: `.tmp/.memory.md` is in `.gitignore` (the entire `.tmp/` folder is ignored), so file search tools will NOT find it. Read it directly by path using the `read` tool.
+**IMPORTANT**: Memory files are in `.gitignore` (the entire `.tmp/` folder is ignored), so file search tools will NOT find them. Read directly by path using the `read` tool.
 
-1. Read `.tmp/.memory.md` from the workspace at the **very beginning** of your session, before doing any other work.
-2. Review all entries to understand prior decisions, user preferences, agreements, and context.
-3. If the file doesn't exist or is empty, proceed normally — there's no prior context.
-4. If a past entry is relevant to the current task, follow the recorded decision unless the user explicitly overrides it.
+1. Read `.env.json` from the workspace root to determine the active project name.
+2. Read `.tmp/projects/<activeProject>/.memory.md` (or `.tmp/.memory.md` if no project is set).
+3. Review all entries to understand prior decisions, user preferences, agreements, and context for this project.
+4. If the file doesn't exist or is empty, proceed normally — there's no prior context.
+5. If a past entry is relevant to the current task, follow the recorded decision unless the user explicitly overrides it.
 
 ## Writing Memory (at end of conversation)
 
-Before finishing your work, evaluate whether anything from this conversation should be remembered. **Append** a new entry to `.tmp/.memory.md` if any of the following occurred:
+Before finishing your work, evaluate whether anything from this conversation should be remembered. **Append** a new entry to the project's memory file if any of the following occurred:
 
 - The user made a **decision** or stated a **preference** (e.g., "always use SysDa instead of while select")
 - You and the user **agreed** on an approach or design pattern

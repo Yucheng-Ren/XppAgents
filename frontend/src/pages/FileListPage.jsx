@@ -5,7 +5,7 @@ import SummaryBanner from '../components/SummaryBanner';
 import { SeverityChart, CategoryChart } from '../components/Charts';
 import { countIssues, fileIcon } from '../utils';
 
-export default function FileListPage({ data }) {
+export default function FileListPage({ data, projectProps }) {
   const allCounts = countIssues(data.files);
   const totalIssues = data.files.reduce((s, f) => s + f.issues.length, 0);
   const allIssues = data.files.flatMap((f) => f.issues);
@@ -23,6 +23,7 @@ export default function FileListPage({ data }) {
         date={data.date}
         totalIssues={totalIssues}
         branchInfo={branchInfo}
+        projectProps={projectProps}
       />
       <div className="container">
         {data.mode === 'branch-diff' && (

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import { fetchReviewData } from './api';
+import { fetchReviewData, fetchProjects, switchProject, createProject, deleteProject } from './api';
+import ProjectSwitcher from './components/ProjectSwitcher';
 import FileListPage from './pages/FileListPage';
 import FileDetailPage from './pages/FileDetailPage';
 import DiffPage from './pages/DiffPage';
@@ -9,12 +10,43 @@ import './App.css';
 export default function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [projectInfo, setProjectInfo] = useState({ activeProject: null, projects: {}, sourceCodePath: '' });
 
-  useEffect(() => {
-    fetchReviewData()
-      .then(setData)
-      .finally(() => setLoading(false));
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    const [reviewData, projData] = await Promise.all([
+      fetchReviewData(),
+      fetchProjects(),
+    ]);
+    setData(reviewData);
+    setProjectInfo(projData);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  async function handleSwitchProject(name) {
+    await switchProject(name);
+    await loadAll();
+  }
+
+  async function handleCreateProject(proj) {
+    await createProject(proj);
+    await loadAll();
+  }
+
+  async function handleDeleteProject(name) {
+    await deleteProject(name);
+    await loadAll();
+  }
+
+  const projectProps = {
+    activeProject: projectInfo.activeProject,
+    projects: projectInfo.projects,
+    onSwitch: handleSwitchProject,
+    onCreate: handleCreateProject,
+    onDelete: handleDeleteProject,
+  };
 
   if (loading) {
     return (
@@ -32,8 +64,13 @@ export default function App() {
     return (
       <>
         <div className="header">
-          <h1>X++ Code Review Dashboard</h1>
-          <p className="subtitle">Automated review powered by xpp-code-reviewer agent</p>
+          <div className="header-top-row">
+            <div>
+              <h1>X++ Code Review Dashboard</h1>
+              <p className="subtitle">Automated review powered by xpp-code-reviewer agent</p>
+            </div>
+            <ProjectSwitcher {...projectProps} />
+          </div>
           <div className="review-meta">
             <span>📄 <strong>—</strong></span>
             <span>🕐 <strong>—</strong></span>
@@ -58,9 +95,9 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<FileListPage data={data} />} />
-        <Route path="/file/:fileName" element={<FileDetailPage data={data} />} />
-        <Route path="/changes" element={<DiffPage data={data} />} />
+        <Route path="/" element={<FileListPage data={data} projectProps={projectProps} />} />
+        <Route path="/file/:fileName" element={<FileDetailPage data={data} projectProps={projectProps} />} />
+        <Route path="/changes" element={<DiffPage data={data} projectProps={projectProps} />} />
       </Routes>
       <Footer date={data.date} />
     </HashRouter>

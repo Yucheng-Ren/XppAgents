@@ -1,8 +1,15 @@
-export default function Header({ fileLabel, date, totalIssues, branchInfo }) {
+import ProjectSwitcher from './ProjectSwitcher';
+
+export default function Header({ fileLabel, date, totalIssues, branchInfo, projectProps }) {
   return (
     <div className="header">
-      <h1>X++ Code Review Dashboard</h1>
-      <p className="subtitle">Automated review powered by xpp-code-reviewer agent</p>
+      <div className="header-top-row">
+        <div>
+          <h1>X++ Code Review Dashboard</h1>
+          <p className="subtitle">Automated review powered by xpp-code-reviewer agent</p>
+        </div>
+        {projectProps && <ProjectSwitcher {...projectProps} />}
+      </div>
       <div className="review-meta">
         <span>
           📄 <strong>{fileLabel || '—'}</strong>

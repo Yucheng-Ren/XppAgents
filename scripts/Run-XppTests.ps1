@@ -83,6 +83,14 @@ if (-not (Test-Path $sysTestExe)) {
 #region --- Prepare output paths ---
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
 $tmpDir = Join-Path $workspaceRoot ".tmp"
+# Use project-scoped output directory if an active project is configured
+$envJsonPath = Join-Path $workspaceRoot ".env.json"
+if (Test-Path $envJsonPath) {
+    $envData = Get-Content $envJsonPath -Raw | ConvertFrom-Json
+    if ($envData.activeProject) {
+        $tmpDir = Join-Path $workspaceRoot ".tmp" "projects" $envData.activeProject
+    }
+}
 if (-not (Test-Path $tmpDir)) { New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null }
 
 if (-not $XmlOutput) {

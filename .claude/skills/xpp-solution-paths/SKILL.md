@@ -1,12 +1,12 @@
 ---
 name: xpp-solution-paths
-description: How to gather and cache D365 solution paths and source code paths for X++ agents. Covers .sln parsing, .rnrproj parsing, and source file location. Used automatically by other skills that need to locate X++ source files.
+description: How to gather and cache D365 solution paths and source code paths for X++ agents. Covers .sln parsing, .rnrproj parsing, and source file location. Used automatically by other skills that need to locate X++ source files. Supports multi-project workspaces.
 user-invocable: false
 ---
 
 # Gathering Solution & Source Paths
 
-All X++ agents need two paths before they can work. These paths are cached in `.env.json` at the workspace root to avoid asking repeatedly.
+All X++ agents need two paths before they can work. These paths are cached in `.env.json` at the workspace root to avoid asking repeatedly. The workspace supports **multiple projects** — each with its own `solutionPath` — while sharing a single `sourceCodePath`.
 
 ## Step 1: Check Cached Paths
 
@@ -15,39 +15,78 @@ All X++ agents need two paths before they can work. These paths are cached in `.
 Read `.env.json` and parse its JSON. It has this structure:
 ```json
 {
+    "sourceCodePath": "C:\\AosService\\PackagesLocalDirectory",
+    "activeProject": "MyProject",
     "solutionPath": "C:\\Users\\you\\source\\repos\\MyProject",
-    "sourceCodePath": "C:\\AosService\\PackagesLocalDirectory"
+    "projects": {
+        "MyProject": {
+            "solutionPath": "C:\\Users\\you\\source\\repos\\MyProject",
+            "description": "Main feature project"
+        },
+        "AnotherProject": {
+            "solutionPath": "C:\\Users\\you\\source\\repos\\AnotherProject",
+            "description": "Secondary project"
+        }
+    }
 }
 ```
 
-- If **both** `solutionPath` and `sourceCodePath` are non-empty strings, use them directly — **do NOT ask the user again**. Briefly confirm: "Using saved paths: solution at `{solutionPath}`, source at `{sourceCodePath}`."
+**Path resolution:**
+- `sourceCodePath` — shared across all projects (same dev box), from the top-level field.
+- `solutionPath` — from `projects[activeProject].solutionPath` (or the top-level `solutionPath` for backward compat).
+
+- If **both** `sourceCodePath` and the active project's `solutionPath` are non-empty strings, use them directly — **do NOT ask the user again**. Briefly confirm: "Using project **{activeProject}**: solution at `{solutionPath}`, source at `{sourceCodePath}`."
 - If **either** path is empty or the file doesn't exist, proceed to Step 2 to ask the user.
-- If the user explicitly asks to **change paths**, **reset paths**, or **use a different solution**, proceed to Step 2 regardless of cached values.
+- If the user explicitly asks to **change paths**, **reset paths**, **use a different solution**, or **switch project**, proceed to Step 2 regardless of cached values.
 
 ## Step 2: Ask the User (only if needed)
 
-1. **Solution path**: The path to the folder containing the `.sln` solution file. This file references all `.rnrproj` projects in the solution.
-2. **Source code path**: The base directory where the actual X++ source files are physically located on disk (e.g., the PackagesLocalDirectory or metadata folder).
+1. **Project name**: A friendly name for the project (e.g., "MyFeature", "ActionPlan").
+2. **Solution path**: The path to the folder containing the `.sln` solution file. This file references all `.rnrproj` projects in the solution.
+3. **Source code path**: The base directory where the actual X++ source files are physically located on disk (e.g., the PackagesLocalDirectory or metadata folder). This is shared across all projects.
 
 Prompt the user with:
-> To get started, I need two paths:
-> 1. **Solution path** — The folder containing the `.sln` solution file (e.g., `C:\Users\you\source\repos\MyProject`).
-> 2. **Source code path** — The base directory where the actual X++ source files are located on disk.
+> To get started, I need project details:
+> 1. **Project name** — A friendly name for this project (e.g., "MyFeature").
+> 2. **Solution path** — The folder containing the `.sln` solution file (e.g., `C:\Users\you\source\repos\MyProject`).
+> 3. **Source code path** — The base directory where the actual X++ source files are located on disk (shared across projects).
 >
-> Please provide both paths.
+> Please provide these details.
 
 If the user provides only one path or is unclear, ask for clarification before proceeding.
 
 ## Step 3: Save Paths to Cache
 
-After obtaining paths (from user or cache), **always** save them to `.env.json` at the workspace root:
+After obtaining paths (from user or cache), **always** save them to `.env.json` at the workspace root. When adding a new project:
 ```json
 {
+    "sourceCodePath": "<the source code path>",
+    "activeProject": "<the project name>",
     "solutionPath": "<the solution path>",
-    "sourceCodePath": "<the source code path>"
+    "projects": {
+        "<the project name>": {
+            "solutionPath": "<the solution path>",
+            "description": ""
+        }
+    }
 }
 ```
-This ensures the next agent invocation can reuse them without asking again.
+
+When the user switches to an existing project, update `activeProject` and `solutionPath` (top-level) to match.
+
+## Per-Project Memory & Data
+
+Each project's working data is stored in `.tmp/projects/<projectName>/`:
+- `.tmp/projects/<projectName>/.memory.md` — project-specific agent memory
+- `.tmp/projects/<projectName>/code-review-result.json` — review results
+- `.tmp/projects/<projectName>/accepted-fixes.json` — accepted fixes
+- `.tmp/projects/<projectName>/build-<model>.xml` — build logs
+- `.tmp/projects/<projectName>/test-results.xml` — test results
+- `.tmp/projects/<projectName>/solution-summary.md` — solution analysis
+
+The root `.tmp/` is used only when no active project is set (backward compat).
+
+**Shared across projects**: skills (`.claude/skills/`), knowledge (`knowledge/`), scripts (`scripts/`).
 
 ## Parsing the Solution
 

@@ -208,7 +208,7 @@ function DiffFileBlock({ file, reviewFiles }) {
   );
 }
 
-export default function DiffPage({ data }) {
+export default function DiffPage({ data, projectProps }) {
   const [diffData, setDiffData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -250,7 +250,7 @@ export default function DiffPage({ data }) {
   if (loading) {
     return (
       <>
-        <Header fileLabel="Loading diff..." date={data?.date} totalIssues={0} branchInfo={branchInfo} />
+        <Header fileLabel="Loading diff..." date={data?.date} totalIssues={0} branchInfo={branchInfo} projectProps={projectProps} />
         <div className="container">
           <div className="loading">Loading diff data...</div>
         </div>
@@ -261,7 +261,7 @@ export default function DiffPage({ data }) {
   if (error) {
     return (
       <>
-        <Header fileLabel="Diff View" date={data?.date} totalIssues={0} branchInfo={branchInfo} />
+        <Header fileLabel="Diff View" date={data?.date} totalIssues={0} branchInfo={branchInfo} projectProps={projectProps} />
         <div className="container">
           <Link to="/" className="back-btn">← Back to review</Link>
           <div className="empty-state">
@@ -280,6 +280,7 @@ export default function DiffPage({ data }) {
         date={data?.date}
         totalIssues={data?.files?.reduce((s, f) => s + f.issues.length, 0) ?? 0}
         branchInfo={branchInfo}
+        projectProps={projectProps}
       />
       <div className="container">
         <div className="diff-toolbar">

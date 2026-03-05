@@ -11,7 +11,7 @@ import { countIssues } from '../utils';
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
-export default function FileDetailPage({ data }) {
+export default function FileDetailPage({ data, projectProps }) {
   const { fileName } = useParams();
   const decoded = decodeURIComponent(fileName);
   const fileData = data.files.find((f) => f.file === decoded);
@@ -51,7 +51,7 @@ export default function FileDetailPage({ data }) {
   if (!fileData) {
     return (
       <>
-        <Header fileLabel="Not found" date={data.date} totalIssues={0} />
+        <Header fileLabel="Not found" date={data.date} totalIssues={0} projectProps={projectProps} />
         <div className="container">
           <div className="empty-state">
             <h2>File Not Found</h2>
@@ -79,7 +79,7 @@ export default function FileDetailPage({ data }) {
 
   return (
     <>
-      <Header fileLabel={fileData.file} date={data.date} totalIssues={total} />
+      <Header fileLabel={fileData.file} date={data.date} totalIssues={total} projectProps={projectProps} />
       <div className="container">
         <Link to="/" className="back-btn">
           ← Back to file list

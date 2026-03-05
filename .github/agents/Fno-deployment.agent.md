@@ -293,6 +293,65 @@ deploy.cmd (build\scripts\)
         12. StartBatchService
 ```
 
+## Real-Time Progress Monitoring (MANDATORY)
+
+During deployment, you MUST actively monitor the output and provide progress updates to the user. Deployments are long-running (30-60+ minutes) and the user needs visibility into what's happening.
+
+### How to monitor
+
+Run the deployment command in the background, then periodically check the log output to report progress. Use the deployment log files:
+
+```powershell
+# Check the latest output from the deploy log
+Get-Content "C:\Logs\DeployAX\deploy.log" -Tail 30
+# Or for DeployLatest
+Get-Content "C:\Logs\DeployAX\Deploy-Latest.log" -Tail 30
+```
+
+### What to report
+
+Map the output to the pipeline steps and tell the user which phase is active. Look for these markers in the output:
+
+| Output pattern | Step | What to tell the user |
+|---|---|---|
+| `Updating deployment scripts` | Pre-deploy | "Downloading latest deployment packages..." |
+| `GetDeployablePackages` | Pre-deploy | "Fetching available deployment packages from NuGet feed..." |
+| `UpdateDeploymentPackages` | Pre-deploy | "Resolving latest Deploy.ServiceModel package..." |
+| `ParseDeployArguments` | Step 1/12 | "Parsing deployment arguments..." |
+| `Prep-Azure-Credentials` | Step 2/12 | "Validating Azure credentials..." |
+| `Prereq-Checks` | Step 3/12 | "Running prerequisite checks..." |
+| `GetDatabaseAdminPassword`, `DynAXKeyVault` | Step 4/12 | "Retrieving database admin password from Key Vault..." |
+| `ExtractDemoData`, `demo data`, `.7z` | Step 5/12 | "Extracting demo data (this may take a while)..." |
+| `ExtractXref`, `cross-reference` | Step 6/12 | "Extracting cross-reference database..." |
+| `Deploy.ServiceModel`, `deploy.ps1`, `Uninstall` | Step 7/12 | "Running core deployment (uninstall → install services)... This is the longest step." |
+| `InstallDynamicsResources` | Step 8/12 | "Installing Dynamics resources..." |
+| `CopyApplicationBinaries` | Step 9/12 | "Copying application binaries to webroot..." |
+| `CopyWebResources` | Step 10/12 | "Copying web resources..." |
+| `PostDeploy`, `post-deploy` | Step 11/12 | "Running post-deployment tasks (DB snapshot, config keys)..." |
+| `StartBatchService`, `DynamicsAxBatch` | Step 12/12 | "Starting batch service... Almost done!" |
+| `Build succeeded`, `0 Error(s)` | Complete | "Deployment completed successfully!" |
+| `Build FAILED`, `Error` | Failed | "Deployment failed. Analyzing logs for root cause..." |
+
+### For DeployLatest, also watch for these earlier phases:
+
+| Output pattern | Phase | What to tell the user |
+|---|---|---|
+| `Checking for pending changes` | Pre-deploy | "Checking for pending git changes..." |
+| `Connecting to Azure` | Pre-deploy | "Authenticating to Azure..." |
+| `git fetch` | Pre-deploy | "Fetching latest tags from remote..." |
+| `Latest good tag`, `Deploying version` | Pre-deploy | "Found latest version: [tag]. Starting deployment..." |
+| `git switch`, `git checkout` | Pre-deploy | "Switching to tag [version]..." |
+| `rewind` | Pre-deploy | "Re-initializing CoreXT environment..." |
+
+### Progress update frequency
+
+- Check the log every **30-60 seconds** during active deployment
+- Always report when a new step begins
+- If the same step is running for more than 5 minutes, reassure the user: "Still on [step]... this step typically takes a while."
+- Immediately report any errors or warnings
+
+---
+
 ## Post-Deploy Script
 
 The `post-deploy.ps1` script runs automatically and:
@@ -462,7 +521,7 @@ Downloads the platform runnable drop from Azure DevOps artifact feeds and sets u
 1. **Ask** what the user wants to do (or infer from their request)
 2. **Warn** about impact (service downtime, time estimate, dirty git state)
 3. **Confirm** before executing destructive/long-running commands
-4. **Execute** the commands in the Inner-loop shell
-5. **Monitor** and report progress from logs
-6. **Verify** the deployment succeeded (check services, logs)
+4. **Execute** the commands in the Inner-loop shell (run in background for long-running deploys)
+5. **Monitor and narrate** — periodically check logs and tell the user which step is active (see "Real-Time Progress Monitoring" section). Never go silent during a deployment.
+6. **Report completion or failure** — on success, summarize what was deployed. On failure, immediately run the Deployment Failure Diagnosis steps and report the root cause.
 7. **Remind** the user to create a new branch after deployment

@@ -162,6 +162,14 @@ Build-XppSolution.ps1                PowerShell orchestrator
 - XML build logs written to `.tmp/build-<model>.xml`
 - A full model build takes ~60s; incremental is faster
 
+## Prerequisites
+
+The `create-pr` skill requires the **Azure DevOps MCP server** to be configured for PR creation via `mcp_ado_repo_create_pull_request`. Set it up by following the instructions at:
+
+> **https://github.com/microsoft/azure-devops-mcp**
+
+This MCP server provides tools for interacting with Azure DevOps repos, work items, pipelines, and more. Once configured, the `create-pr` skill can automatically create pull requests, link work items, and manage branches.
+
 ## Claude Code Skills
 
 Domain knowledge and task automation packaged as [Claude Code skills](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/skills) in `.claude/skills/`. These are also referenced by the GitHub Copilot agents as shared knowledge.
@@ -170,6 +178,7 @@ Domain knowledge and task automation packaged as [Claude Code skills](https://do
 |-------|------|-------------|
 | `run-tests` | Task (invokable via `/run-tests`) | Run X++ tests and report results |
 | `build-solution` | Task (invokable via `/build-solution`) | Build X++ models and report errors |
+| `create-pr` | Task (invokable via `/create-pr`) | Create Azure DevOps PR (auto commit, push, summarize) |
 | `xpp-patterns` | Reference (auto-loaded) | X++ coding patterns, rules, and anti-patterns |
 | `xpp-test-patterns` | Reference (auto-loaded) | X++ test writing patterns (AAA, naming, setup) |
 | `xpp-solution-paths` | Reference (auto-loaded) | Solution/source path resolution and caching |
@@ -213,6 +222,7 @@ XppAgents/
 │   └── skills/                  # Claude Code skills
 │       ├── run-tests/           # Test runner skill (SKILL.md + reference.md + lessons.md)
 │       ├── build-solution/      # Build skill (SKILL.md + reference.md)
+│       ├── create-pr/           # PR creation skill (SKILL.md) — requires ADO MCP
 │       ├── xpp-patterns/        # X++ coding patterns (SKILL.md)
 │       ├── xpp-test-patterns/   # X++ test patterns (SKILL.md + reference.md)
 │       ├── xpp-solution-paths/  # Path resolution (SKILL.md)

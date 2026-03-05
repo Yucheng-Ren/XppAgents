@@ -95,13 +95,18 @@ if (-not $SkipBP -and -not (Test-Path $xppbpExe)) {
     $SkipBP = $true
 }
 
-# Read solution dir from .env.json if not specified
+# Read solution dir from .env.json if not specified (supports multi-project)
 if (-not $SolutionDir) {
     $workspaceRoot = Split-Path -Parent $PSScriptRoot
     $envJson = Join-Path $workspaceRoot ".env.json"
     if (Test-Path $envJson) {
         $env = Get-Content $envJson -Raw | ConvertFrom-Json
-        $SolutionDir = $env.solutionPath
+        # Multi-project: use activeProject's solutionPath, fallback to top-level
+        if ($env.activeProject -and $env.projects -and $env.projects.PSObject.Properties[$env.activeProject]) {
+            $SolutionDir = $env.projects.($env.activeProject).solutionPath
+        } elseif ($env.solutionPath) {
+            $SolutionDir = $env.solutionPath
+        }
     }
 }
 #endregion
@@ -143,6 +148,14 @@ if ($Models -eq "all") {
 #region --- Prepare output ---
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
 $tmpDir = Join-Path $workspaceRoot ".tmp"
+# Use project-scoped output directory if an active project is configured
+$envJsonPath = Join-Path $workspaceRoot ".env.json"
+if (Test-Path $envJsonPath) {
+    $envData = Get-Content $envJsonPath -Raw | ConvertFrom-Json
+    if ($envData.activeProject) {
+        $tmpDir = Join-Path $workspaceRoot ".tmp" "projects" $envData.activeProject
+    }
+}
 if (-not (Test-Path $tmpDir)) { New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null }
 #endregion
 

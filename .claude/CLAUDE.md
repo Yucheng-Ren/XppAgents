@@ -61,7 +61,7 @@ This project has a working CLI test runner for X++ SysTests. Full docs in the `/
 ```
 
 - Uses `scripts/SysTestLauncher.exe` → `SysTestConsole.17.0.exe` under the hood
-- Results written to `.tmp/test-results.xml` (SysTestListenerXML format)
+- Results written to project-scoped `.tmp/projects/<project>/test-results.xml`
 - Exit code 0 = all passed, 1 = failures
 - After writing or modifying X++ test classes, **run the tests** to verify correctness
 - Use `/run-tests <TestClassName>` skill for guided test execution
@@ -77,10 +77,34 @@ This project has a CLI build system using `xppc.exe` (X++ Compiler). Full docs i
 
 - Uses `xppc.exe` directly — no MSBuild/Visual Studio dependency
 - Builds entire models (classes, tables, forms, queries, etc.)
-- XML build logs written to `.tmp/build-<model>.xml`
+- XML build logs written to project-scoped `.tmp/projects/<project>/build-<model>.xml`
 - Exit code 0 = success, 1 = errors
 - After writing or modifying X++ code, **build the model** to verify it compiles
 - Use `/build-solution <ModelName>` skill for guided builds
+
+## Multi-Project Support
+
+The workspace supports **multiple projects**. Each project has its own `solutionPath` and isolated data directory, while sharing the same `sourceCodePath`, skills, and knowledge base.
+
+**Configuration** is in `.env.json`:
+```json
+{
+    "sourceCodePath": "C:\\AosService\\PackagesLocalDirectory",
+    "activeProject": "MyProject",
+    "solutionPath": "C:\\Users\\you\\repos\\MyProject",
+    "projects": {
+        "MyProject": { "solutionPath": "...", "description": "..." },
+        "AnotherProject": { "solutionPath": "...", "description": "..." }
+    }
+}
+```
+
+**Per-project data** lives in `.tmp/projects/<projectName>/`:
+- Agent memory (`.memory.md`), code review results, build/test logs, accepted fixes
+
+**Shared across all projects**: skills (`.claude/skills/`), knowledge (`knowledge/`), scripts (`scripts/`)
+
+**Switching projects**: Update `activeProject` in `.env.json`. The dashboard UI has a project switcher in the header. Agents read the active project from `.env.json` at session start.
 
 ## Skills
 
@@ -90,6 +114,7 @@ All domain knowledge lives in `.claude/skills/` as Claude Code skills:
 |-------|------|-------------|
 | `run-tests` | Task (invokable) | Run X++ tests via `/run-tests <ClassName>` |
 | `build-solution` | Task (invokable) | Build X++ models via `/build-solution <Model>` |
+| `create-pr` | Task (invokable) | Create Azure DevOps PR via `/create-pr [title or work items]` |
 | `xpp-patterns` | Reference (auto) | X++ coding patterns and review rules |
 | `xpp-test-patterns` | Reference (auto) | X++ test writing patterns (AAA, naming, setup) |
 | `xpp-solution-paths` | Reference (auto) | Solution/source path resolution and caching |
