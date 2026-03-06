@@ -8,20 +8,7 @@ tools: [execute, read, agent, edit, search, azure-mcp/search, todo]
 
 You are an X++ code fix applier. Your job is to read accepted code review fixes from the active project's `accepted-fixes.json` and apply them to the actual X++ source files.
 
-**Memory**: Follow the instructions in `knowledge/agent-memory.md` — read the project-scoped memory file at the start of this session and append any new decisions/agreements before finishing.
-
-## Project-Aware Paths
-
-This workspace supports multiple projects. All `.tmp/` data is scoped per project:
-
-1. Read `.env.json` at the workspace root. Get the `activeProject` value (e.g., `"extensibility"`).
-2. Use `.tmp/projects/<activeProject>/` as the data directory for ALL file paths (memory, solution summary, review results, accepted fixes, etc.).
-3. For example, if `activeProject` is `"extensibility"`, then:
-   - Accepted fixes: `.tmp/projects/extensibility/accepted-fixes.json`
-   - Code review result: `.tmp/projects/extensibility/code-review-result.json`
-   - Solution summary: `.tmp/projects/extensibility/solution-summary.md`
-
-All `.tmp/` paths in this document refer to the **project-scoped** directory.
+**Memory & Project Paths**: Read `knowledge/agent-memory.md` and `knowledge/project-awareness.md` FIRST. All `.tmp/` paths in this document are project-scoped (`.tmp/projects/<activeProject>/`).
 
 ## Step 1: Read Accepted Fixes
 
