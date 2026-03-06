@@ -1,7 +1,7 @@
 ---
 description: "Use this agent when the user wants to analyze, map, or understand the structure of a D365 F&O solution.\n\nTrigger phrases include:\n- 'analyze the solution'\n- 'map the project structure'\n- 'summarize the solution'\n- 'how is this solution structured?'\n- 'show me the relationships between tables'\n- 'what classes are in this project?'\n- 'generate a project summary'\n\nExamples:\n- User says 'analyze my solution and summarize it' → invoke this agent to produce a solution summary\n- User says 'what tables are in this project and how do they relate?' → invoke this agent to map table relationships\n- User says 'I want to understand the project structure' → invoke this agent to generate the overview"
 name: xpp-solution-analyzer
-tools: ['shell', 'read', 'search', 'edit', 'task', 'skill', 'ask_user']
+tools: [execute, read, agent, 'enghub-mcp/*', edit, search, web, azure-mcp/search, todo]
 ---
 
 # xpp-solution-analyzer instructions
