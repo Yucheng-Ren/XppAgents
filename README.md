@@ -153,29 +153,6 @@ Deploys FnO builds on inner-loop dev boxes using the Corext pipeline.
 6.  @xpp-test-writer write tests for <class>
 ```
 
-## Test Runner
-
-```powershell
-.\scripts\Run-XppTests.ps1 -TestClasses "MyTestClass"
-.\scripts\Run-XppTests.ps1 -TestClasses "ClassA,ClassB"
-```
-
-- Exit code `0` = all passed, `1` = failures
-- Results written to project-scoped `test-results.xml`
-- First test ~15s (AOS kernel init), subsequent ~3s each
-
-## Build System
-
-```powershell
-.\scripts\Build-XppSolution.ps1                           # All models from solution
-.\scripts\Build-XppSolution.ps1 -Models "ModelName"        # Specific model
-.\scripts\Build-XppSolution.ps1 -Models "ModelName" -Incremental  # Faster incremental
-```
-
-- Exit code `0` = success, `1` = errors
-- Build logs written to project-scoped `build-<model>.xml`
-- Full build ~60s; incremental is faster
-
 ## Claude Code Skills
 
 Domain knowledge and automation in `.claude/skills/`, shared across all projects.
