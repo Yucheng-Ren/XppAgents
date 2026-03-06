@@ -18,42 +18,94 @@ npm start
 
 The dashboard is available at **http://localhost:3000**.
 
+## Multi-Project Support
+
+The workspace supports **multiple D365 projects**. Each project has its own solution path and isolated working data, while sharing the same source code path, skills, and knowledge base.
+
+### Configuration (`.env.json`)
+
+```json
+{
+    "sourceCodePath": "C:\\AosService\\PackagesLocalDirectory",
+    "activeProject": "extensibility",
+    "solutionPath": "C:\\Users\\you\\source\\repos\\SCM Copilot",
+    "projects": {
+        "extensibility": {
+            "solutionPath": "C:\\Users\\you\\source\\repos\\SCM Copilot",
+            "description": "SCM Copilot extensibility project"
+        },
+        "Excel": {
+            "solutionPath": "C:\\Users\\you\\source\\repos\\Copilot",
+            "description": "Excel project"
+        }
+    }
+}
+```
+
+- **`sourceCodePath`** — shared across all projects (X++ metadata root on the dev box)
+- **`activeProject`** — which project agents and the dashboard currently operate on
+- **`projects`** — map of project name → `{ solutionPath, description }`
+- **`solutionPath`** (top-level) — mirrors the active project's path for backward compatibility
+
+### Per-project data
+
+Each project's working data lives in `.tmp/projects/<projectName>/`:
+
+| File | Purpose |
+|------|---------|
+| `.memory.md` | Agent memory for this project |
+| `solution-summary.md` | Solution structure analysis |
+| `code-review-result.json` | Code review findings |
+| `accepted-fixes.json` | Fixes accepted via the dashboard |
+| `build-<model>.xml` | Build logs |
+| `test-results.xml` | Test results |
+
+Skills, knowledge, and scripts are **shared** across all projects.
+
+### Solution discovery
+
+When an agent starts working on a project, it:
+
+1. Reads `.env.json` to get the active project's `solutionPath`
+2. Finds and parses the `.sln` file to discover all `.rnrproj` project references
+3. Reads each `.rnrproj` to extract the model name and all objects (classes, tables, forms, enums, etc.)
+4. Locates source files at `<sourceCodePath>/<ModelName>/<ObjectType>/<ObjectName>.xml`
+
+For details, see `knowledge/project-awareness.md` and `.claude/skills/xpp-solution-paths/SKILL.md`.
+
+### Switching projects
+
+- **Dashboard**: Use the project switcher dropdown in the header
+- **Agents**: Update `activeProject` in `.env.json`, or tell any agent to switch
+- **API**: `PUT /api/projects/active` with `{ "name": "projectName" }`
+
 ## Agents
 
-Five Copilot agents live in `.github/agents/`. Invoke them in VS Code Copilot Chat using `@agent-name`.
+Six Copilot agents live in `.github/agents/`. Invoke them in VS Code Copilot Chat using `@agent-name`.
 
 ### @xpp-solution-analyzer — Understand your solution
 
-Run this **first** on any new solution. It reads your `.sln` and all `.rnrproj` projects, analyzes every table, class, form, enum, and EDT, then writes a structured summary to `.tmp/solution-summary.md`. All other agents depend on this summary.
+Run this **first** on any new project. It reads the `.sln` and all `.rnrproj` projects, analyzes every table, class, form, enum, and EDT, then writes a structured summary to the project-scoped `solution-summary.md`. All other agents depend on this summary.
 
 ```
 @xpp-solution-analyzer analyze my solution
 ```
 
-**What it does:**
-- Parses `.sln` → `.rnrproj` → inventories all objects
-- Deep-reads tables (fields, indexes, relations), classes (methods, inheritance), forms (datasources, patterns)
-- Generates a comprehensive markdown summary with table relationships, class architecture, and form structure
-
 ### @xpp-code-reviewer — Review your code
 
-Performs a comprehensive code review against X++ best practices, security patterns, performance rules, and common pitfalls.
+Performs a comprehensive code review against X++ best practices, security patterns, and performance rules.
 
 ```
 @xpp-code-reviewer review my code
 @xpp-code-reviewer review my changes
 ```
 
-**Two modes:**
 | Command | Mode | What it reviews |
 |---------|------|-----------------|
 | "review my code" | Full Review | All files in the solution |
-| "review my changes" / "review my branch" | Branch Diff | Only files changed since the branch diverged from its parent |
+| "review my changes" | Branch Diff | Only files changed since the branch diverged |
 
-**Output:**
-- Chat summary with issues, strengths, and recommendations per file
-- `.tmp/code-review-result.json` — structured data consumed by the dashboard
-- View results at **http://localhost:3000** with severity/category charts, filters, and per-file detail pages
+Output: chat summary + `code-review-result.json` for the dashboard.
 
 ### @xpp-coder — Write and modify X++ code
 
@@ -62,51 +114,40 @@ An expert X++ developer that writes production-quality code following D365 conve
 ```
 @xpp-coder create a batch job class that processes purchase orders
 @xpp-coder add error handling to the validate method
-@xpp-coder extend PurchTable with a new field
 ```
-
-**Capabilities:**
-- Write new classes, tables, forms, enums, EDTs, security objects, data entities
-- Modify existing code — add methods, refactor, optimize, fix bugs
-- Implement patterns — Chain of Command, SysOperation batch jobs, number sequences, event handlers
-- Auto-updates `.rnrproj` project files when creating new objects
 
 ### @xpp-test-writer — Write and verify X++ tests
 
-Writes thorough X++ test classes following SysTest framework patterns, then runs them on the OneBox dev box to verify they pass.
+Writes X++ test classes following SysTest patterns, then runs them to verify they pass.
 
 ```
-@xpp-test-writer write tests for PurchCopilotGenActionPlanParser
+@xpp-test-writer write tests for MyClass
 @xpp-test-writer add test coverage for the email filter feature
 ```
 
-**Capabilities:**
-- Generates test classes following AAA (Arrange/Act/Assert) pattern
-- Uses ATL entity builders, `SysDetourContext` mocking, and form adaptors where appropriate
-- Auto-runs tests via the CLI test runner after writing them
-- Iterates up to 3 fix cycles if tests fail, then reports results
-
 ### @xpp-fix-applier — Apply accepted review fixes
 
-After reviewing issues on the dashboard and clicking **Accept Fix**, this agent applies the accepted changes to your actual source files.
+After reviewing issues on the dashboard and clicking **Accept Fix**, this agent applies the changes to source files.
 
 ```
 @xpp-fix-applier apply accepted fixes
 ```
 
-**Workflow:**
-1. Reads `.tmp/accepted-fixes.json` (populated by the dashboard)
-2. Locates each source file using the solution paths
-3. Finds the problematic code and replaces it with the fix
-4. Marks applied fixes so they aren't re-applied
-5. Reports a summary of applied and skipped fixes
+### @fno-deployment — Deploy builds to dev box
+
+Deploys FnO builds on inner-loop dev boxes using the Corext pipeline.
+
+```
+@fno-deployment deploy latest build
+@fno-deployment what version is deployed
+```
 
 ## Typical Workflow
 
 ```
 1.  @xpp-solution-analyzer analyze my solution
 2.  @xpp-code-reviewer review my changes
-3.  Open http://localhost:3000 → review issues → click "Accept Fix" on issues to fix
+3.  Open http://localhost:3000 → review issues → click "Accept Fix"
 4.  @xpp-fix-applier apply accepted fixes
 5.  @xpp-coder <implement new features or refactor code>
 6.  @xpp-test-writer write tests for <class>
@@ -114,98 +155,69 @@ After reviewing issues on the dashboard and clicking **Accept Fix**, this agent 
 
 ## Test Runner
 
-An automated CLI test runner for X++ SysTests on a D365 OneBox dev box.
-
 ```powershell
-# Run a single test class
 .\scripts\Run-XppTests.ps1 -TestClasses "MyTestClass"
-
-# Run multiple test classes
 .\scripts\Run-XppTests.ps1 -TestClasses "ClassA,ClassB"
 ```
 
-**Architecture:**
-```
-Run-XppTests.ps1                     PowerShell orchestrator
-  └─► scripts/SysTestLauncher.exe    C# wrapper (bypasses ReadKey prompt)
-        └─► SysTestConsole.17.0.exe  D365 built-in CLI test runner
-              └─► AxDB SQL Server    Test execution with AutoRollback isolation
-```
-
 - Exit code `0` = all passed, `1` = failures
-- Results written to `.tmp/test-results.xml` (SysTestListenerXML format)
-- First test takes ~15s (AOS kernel init), subsequent tests ~3s each
+- Results written to project-scoped `test-results.xml`
+- First test ~15s (AOS kernel init), subsequent ~3s each
 
 ## Build System
 
-An automated CLI build system for X++ models on a D365 OneBox dev box.
-
 ```powershell
-# Build all models discovered from the solution (default)
-.\scripts\Build-XppSolution.ps1
-
-# Build a specific model
-.\scripts\Build-XppSolution.ps1 -Models "ModelName"
-
-# Incremental build (faster — only changed elements)
-.\scripts\Build-XppSolution.ps1 -Models "ModelName" -Incremental
-```
-
-**Architecture:**
-```
-Build-XppSolution.ps1                PowerShell orchestrator
-  └─► xppc.exe (X++ Compiler)        Direct compilation — no VS/MSBuild dependency
-        └─► PackagesLocalDirectory   Metadata + assembly output
+.\scripts\Build-XppSolution.ps1                           # All models from solution
+.\scripts\Build-XppSolution.ps1 -Models "ModelName"        # Specific model
+.\scripts\Build-XppSolution.ps1 -Models "ModelName" -Incremental  # Faster incremental
 ```
 
 - Exit code `0` = success, `1` = errors
-- XML build logs written to `.tmp/build-<model>.xml`
-- A full model build takes ~60s; incremental is faster
-
-## Prerequisites
-
-The `create-pr` skill requires the **Azure DevOps MCP server** to be configured for PR creation via `mcp_ado_repo_create_pull_request`. Set it up by following the instructions at:
-
-> **https://github.com/microsoft/azure-devops-mcp**
-
-This MCP server provides tools for interacting with Azure DevOps repos, work items, pipelines, and more. Once configured, the `create-pr` skill can automatically create pull requests, link work items, and manage branches.
+- Build logs written to project-scoped `build-<model>.xml`
+- Full build ~60s; incremental is faster
 
 ## Claude Code Skills
 
-Domain knowledge and task automation packaged as [Claude Code skills](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/skills) in `.claude/skills/`. These are also referenced by the GitHub Copilot agents as shared knowledge.
+Domain knowledge and automation in `.claude/skills/`, shared across all projects.
 
 | Skill | Type | Description |
 |-------|------|-------------|
-| `run-tests` | Task (invokable via `/run-tests`) | Run X++ tests and report results |
-| `build-solution` | Task (invokable via `/build-solution`) | Build X++ models and report errors |
-| `create-pr` | Task (invokable via `/create-pr`) | Create Azure DevOps PR (auto commit, push, summarize) |
-| `xpp-patterns` | Reference (auto-loaded) | X++ coding patterns, rules, and anti-patterns |
-| `xpp-test-patterns` | Reference (auto-loaded) | X++ test writing patterns (AAA, naming, setup) |
-| `xpp-solution-paths` | Reference (auto-loaded) | Solution/source path resolution and caching |
-| `less-vrtt` | Reference (auto-loaded) | LESS styles and VRTT for extensible controls |
+| `run-tests` | Task (`/run-tests`) | Run X++ tests and report results |
+| `build-solution` | Task (`/build-solution`) | Build X++ models and report errors |
+| `create-pr` | Task (`/create-pr`) | Create Azure DevOps PR (requires ADO MCP) |
+| `xpp-patterns` | Reference | X++ coding patterns, rules, and anti-patterns |
+| `xpp-test-patterns` | Reference | X++ test writing patterns (AAA, naming, setup) |
+| `xpp-solution-paths` | Reference | Solution/source path resolution and caching |
+| `less-vrtt` | Reference | LESS styles and VRTT for extensible controls |
 
 ## Dashboard
 
-A React app (Vite + React 19) that visualizes code review results.
+A React app (Vite + React 19) that visualizes code review results for the active project.
 
 **Features:**
-- File list view with aggregate stats (total issues, severity breakdown)
+- Project switcher — switch between projects from the header
+- File list with aggregate stats (total issues, severity breakdown)
 - Per-file detail pages with issue cards, severity/category charts
-- Filter issues by severity and category
-- Accept individual fixes (persisted to `.tmp/accepted-fixes.json`)
-- Shows "Applied to source" status after the fix-applier agent runs
-- Branch diff info when reviewing changes
+- Filter by severity and category
+- Accept fixes (persisted to project-scoped `accepted-fixes.json`)
+- "Applied to source" status after the fix-applier agent runs
 
 **API endpoints:**
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/review` | Review data from `code-review-result.json` |
-| GET | `/api/accepted-fixes` | All accepted fixes |
+| GET | `/api/review` | Review data for active project |
+| GET | `/api/accepted-fixes` | Accepted fixes for active project |
 | POST | `/api/accept-fix` | Accept a single fix |
 | PATCH | `/api/accepted-fixes/mark-applied` | Mark fixes as applied |
 | DELETE | `/api/accepted-fixes/applied` | Remove applied fixes |
 | DELETE | `/api/accepted-fixes` | Clear all accepted fixes |
+| GET | `/api/projects` | List all projects |
+| PUT | `/api/projects/active` | Switch active project |
+| POST | `/api/projects` | Create a new project |
+| PUT | `/api/projects/:name` | Update a project |
+| DELETE | `/api/projects/:name` | Delete a project |
+| PUT | `/api/source-code-path` | Update shared source code path |
 
 ## Project Structure
 
@@ -216,60 +228,57 @@ XppAgents/
 │   ├── xpp-code-reviewer.agent.md
 │   ├── xpp-coder.agent.md
 │   ├── xpp-test-writer.agent.md
-│   └── xpp-fix-applier.agent.md
+│   ├── xpp-fix-applier.agent.md
+│   └── Fno-deployment.agent.md
 ├── .claude/
 │   ├── CLAUDE.md                # Claude Code project instructions
-│   └── skills/                  # Claude Code skills
-│       ├── run-tests/           # Test runner skill (SKILL.md + reference.md + lessons.md)
-│       ├── build-solution/      # Build skill (SKILL.md + reference.md)
-│       ├── create-pr/           # PR creation skill (SKILL.md) — requires ADO MCP
-│       ├── xpp-patterns/        # X++ coding patterns (SKILL.md)
-│       ├── xpp-test-patterns/   # X++ test patterns (SKILL.md + reference.md)
-│       ├── xpp-solution-paths/  # Path resolution (SKILL.md)
-│       └── less-vrtt/           # LESS/VRTT docs (SKILL.md)
-├── scripts/                     # CLI build & test tools
-│   ├── Build-XppSolution.ps1    # X++ build orchestrator (xppc.exe wrapper)
-│   ├── Run-XppTests.ps1         # X++ test orchestrator
-│   ├── SysTestLauncher.exe      # C# wrapper (bypasses Console.ReadKey)
-│   └── SysTestLauncher.cs       # Source for the launcher
-├── frontend/                    # React dashboard app (Vite)
-│   ├── src/
-│   │   ├── components/          # Header, StatsGrid, Charts, FilterBar, IssueCard
-│   │   ├── pages/               # FileListPage, FileDetailPage, DiffPage
-│   │   ├── App.jsx              # Router setup
-│   │   ├── api.js               # API client
-│   │   └── utils.js             # Helpers
-│   └── package.json
-├── knowledge/
+│   └── skills/                  # Shared skills (all projects)
+│       ├── run-tests/
+│       ├── build-solution/
+│       ├── create-pr/
+│       ├── xpp-patterns/
+│       ├── xpp-test-patterns/
+│       ├── xpp-solution-paths/
+│       └── less-vrtt/
+├── knowledge/                   # Shared knowledge (all projects)
+│   ├── project-awareness.md     # Multi-project path resolution rules
 │   └── agent-memory.md          # Cross-session memory instructions
-├── server.js                    # Node.js HTTP server (API + static file serving)
-├── package.json                 # Root scripts
-├── .env.json                    # Cached solution/source paths (git-ignored)
-└── .tmp/                        # Generated output files (git-ignored)
-    ├── .memory.md               # Agent memory file
-    ├── code-review-result.json
-    ├── accepted-fixes.json
-    ├── test-results.xml
-    ├── build-<model>.xml
-    └── solution-summary.md
+├── scripts/                     # CLI build & test tools
+│   ├── Build-XppSolution.ps1
+│   ├── Run-XppTests.ps1
+│   ├── SysTestLauncher.exe
+│   └── SysTestLauncher.cs
+├── frontend/                    # React dashboard (Vite)
+│   └── src/
+│       ├── components/          # Header, ProjectSwitcher, StatsGrid, Charts, etc.
+│       ├── pages/               # FileListPage, FileDetailPage, DiffPage
+│       ├── App.jsx
+│       ├── api.js
+│       └── utils.js
+├── server.js                    # Node.js HTTP server (API + static files)
+├── package.json
+├── .env.json                    # Project config & cached paths (git-ignored)
+└── .tmp/                        # Generated data (git-ignored)
+    └── projects/
+        ├── extensibility/       # Per-project working data
+        │   ├── .memory.md
+        │   ├── solution-summary.md
+        │   ├── code-review-result.json
+        │   ├── accepted-fixes.json
+        │   └── ...
+        └── Excel/
+            └── ...
 ```
 
-## Path Configuration
+## Prerequisites
 
-On first use, any agent will ask for two paths:
-
-1. **Solution path** — folder containing the `.sln` file (e.g., `C:\Users\you\source\repos\MyProject`)
-2. **Source code path** — base directory with X++ source files (e.g., `C:\AosService\PackagesLocalDirectory`)
-
-These are cached in `.env.json` so you only need to provide them once. To reset, delete `.env.json` or tell any agent to "use a different solution".
+The `create-pr` skill requires the **Azure DevOps MCP server**:
+> **https://github.com/microsoft/azure-devops-mcp**
 
 ## Development
 
 ```bash
-# Run the dashboard in dev mode (hot reload on port 5173, proxies API to 3000)
-npm start                  # start the server
-npm run dev:frontend       # start Vite dev server
-
-# Rebuild after frontend changes
-npm run build
+npm start                  # Start the server (port 3000)
+npm run dev:frontend       # Vite dev server (port 5173, proxies API to 3000)
+npm run build              # Rebuild frontend for production
 ```
