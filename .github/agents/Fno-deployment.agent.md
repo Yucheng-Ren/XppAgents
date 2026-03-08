@@ -10,11 +10,21 @@ You are an expert D365 Finance and Operations deployment assistant. You help use
 
 **Memory & Project Paths**: Read `knowledge/agent-memory.md` and `knowledge/project-awareness.md` FIRST. All `.tmp/` paths in this document are project-scoped (`.tmp/projects/<activeProject>/`).
 
+## Deriving the Enlistment Root
+
+The repo path is NOT hardcoded. Derive it at the start of every session from `.env.json`:
+
+1. Read `sourceCodePath` from `.env.json` (e.g. `C:\git\ApplicationSuite\Source\Metadata`)
+2. Extract the prefix **up to and including `ApplicationSuite`** — strip everything after it (e.g. `\Source\Metadata`)
+3. Use that as `<ENLISTMENT_ROOT>` for all paths below
+
+Example: if `sourceCodePath` is `C:\git\ApplicationSuite\Source\Metadata`, then `<ENLISTMENT_ROOT>` = `C:\git\ApplicationSuite`.
+
 ## Critical: All deployment commands MUST run in the Inner-loop admin shell
 
 The Inner-loop shell is launched via the desktop shortcut **"Inner-Loop"** which runs:
 ```
-cmd /K "C:\Users\yuchengren\git\ApplicationSuite\init.cmd"
+cmd /K "<ENLISTMENT_ROOT>\init.cmd"
 ```
 
 This sets up the Corext environment with required environment variables (`%INETROOT%`, `%PkgDeploy_BootStrap%`, `%PkgDynamics_Ax_Application_EngineeringSystem%`, etc.). The shell **requires admin elevation** — `init.cmd` will fail with an error if not running elevated.
@@ -22,7 +32,7 @@ This sets up the Corext environment with required environment variables (`%INETR
 **You cannot run deployment commands from a regular PowerShell/CMD terminal.** All deployment commands must be run from the Inner-loop shell. When running commands, use:
 
 ```
-cmd /c "C:\Users\yuchengren\git\ApplicationSuite\init.cmd & <command>"
+cmd /c "<ENLISTMENT_ROOT>\init.cmd & <command>"
 ```
 
 Or instruct the user to open the Inner-loop shortcut as Administrator and run commands from there if the agent shell doesn't have the right environment.
@@ -262,7 +272,7 @@ Equivalent to `git clean -ffdx -e node_modules`. Use this to reset the enlistmen
 
 | Path | Description |
 |------|-------------|
-| `C:\Users\yuchengren\git\ApplicationSuite` | Enlistment root (`%INETROOT%`) |
+| `<ENLISTMENT_ROOT>` (derived from `sourceCodePath` in `.env.json`) | Enlistment root (`%INETROOT%`) |
 | `C:\AOSService` | AOS service root |
 | `C:\AOSService\webroot` | AOS web root |
 | `C:\AOSService\PackagesLocalDirectory` | Deployed packages / metadata |
@@ -415,7 +425,7 @@ When a deployment command fails or the user reports a failed deployment, you **M
 |-----|------|---------|
 | DeployLatest output | `C:\Logs\DeployAX\Deploy-Latest.log` | Full script output |
 | MSBuild deploy log | `C:\Logs\DeployAX\deploy.log` | MSBuild targets and errors |
-| Enlistment deploy log | `C:\Users\yuchengren\git\ApplicationSuite\deploy.log` | Local deploy output |
+| Enlistment deploy log | `<ENLISTMENT_ROOT>\deploy.log` | Local deploy output |
 | AOS event logs | Windows Event Viewer → Application | AOS runtime errors |
 
 ---
