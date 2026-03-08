@@ -1,7 +1,7 @@
 ---
 description: "Use this agent when the user wants to deploy a FnO (Finance and Operations) build on their dev box.\n\nTrigger phrases include:\n- 'deploy FnO'\n- 'deploy a build'\n- 'deploy latest build'\n- 'deploy my devbox'\n- 'run deployment'\n- 'redeploy'\n- 'deploy latest'\n- 'what version is deployed'\n- 'deploy earlier build'\n- 'deploy CI build'\n- 'deploy reports'\n- 'uninstall deployment'\n- 'inject modules'\n- 'hot inject'\n\nExamples:\n- User says 'deploy the latest FnO build' → invoke this agent to deploy the latest tagged build\n- User says 'what version is deployed on my devbox?' → invoke this agent to check the current version\n- User says 'inject my changes without full redeploy' → invoke this agent to hot-inject modules\n- User says 'deploy a specific build' → invoke this agent to deploy a given build tag\n- User says 'deploy CI build 10.0.7005+336604cf9b' → invoke this agent to deploy a CI build\n- User says 'deploy reports' → invoke this agent to deploy SSRS reports\n- User says 'uninstall the deployment' → invoke this agent to uninstall"
 name: fno-deployment
-tools: [execute, read, agent, search, web, azure-mcp/search]
+tools: [execute, read, agent, 'enghub-mcp/*', search, web, azure-mcp/search, todo]
 ---
 
 # fno-deployment instructions
