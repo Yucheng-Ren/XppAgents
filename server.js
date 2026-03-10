@@ -63,13 +63,22 @@ function computeGitDiff(reviewData, paths) {
     const { branch, parentBranch } = reviewData;
     if (!branch || !parentBranch) return null;
 
-    // Determine repo path: env var, or try active project's solutionPath, or common locations
+    // Determine repo path: env var, or try active project's solutionPath, sourceCodePath ancestors, or common locations
     let repoPath = GIT_REPO_PATH;
     if (!repoPath) {
         const env = loadEnvJson();
         const proj = env.activeProject && env.projects && env.projects[env.activeProject];
         if (proj && proj.solutionPath && fs.existsSync(path.join(proj.solutionPath, '.git'))) {
             repoPath = proj.solutionPath;
+        }
+        // Walk up sourceCodePath to find a .git root (e.g., sourceCodePath may be a subdirectory of the repo)
+        if (!repoPath && env.sourceCodePath) {
+            let candidate = path.resolve(env.sourceCodePath);
+            const root = path.parse(candidate).root;
+            while (candidate !== root) {
+                if (fs.existsSync(path.join(candidate, '.git'))) { repoPath = candidate; break; }
+                candidate = path.dirname(candidate);
+            }
         }
     }
     if (!repoPath) {
