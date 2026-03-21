@@ -95,7 +95,8 @@ if (-not $SkipBP -and -not (Test-Path $xppbpExe)) {
     $SkipBP = $true
 }
 
-# Read solution dir from .env.json if not specified (supports multi-project)
+# Read solution dir and sourceCodePath from .env.json if not specified (supports multi-project)
+$MetadataDir = ""
 if (-not $SolutionDir) {
     $workspaceRoot = Split-Path -Parent $PSScriptRoot
     $envJson = Join-Path $workspaceRoot ".env.json"
@@ -107,7 +108,15 @@ if (-not $SolutionDir) {
         } elseif ($env.solutionPath) {
             $SolutionDir = $env.solutionPath
         }
+        # Read sourceCodePath — the actual X++ metadata directory (may differ from PackagesDir)
+        if ($env.sourceCodePath -and (Test-Path $env.sourceCodePath)) {
+            $MetadataDir = $env.sourceCodePath
+        }
     }
+}
+# Fall back to PackagesDir if no separate metadata path is configured
+if (-not $MetadataDir) {
+    $MetadataDir = $PackagesDir
 }
 #endregion
 
@@ -169,7 +178,11 @@ if ($modelList.Count -gt 1) {
     $deps = @{}
     foreach ($m in $modelList) {
         $deps[$m] = @()
-        $descDir = Join-Path $PackagesDir "$m\Descriptor"
+        # Check MetadataDir first (source path), then fall back to PackagesDir
+        $descDir = Join-Path $MetadataDir "$m\Descriptor"
+        if (-not (Test-Path $descDir)) {
+            $descDir = Join-Path $PackagesDir "$m\Descriptor"
+        }
         if (Test-Path $descDir) {
             $descFile = Get-ChildItem $descDir -Filter "*.xml" | Select-Object -First 1
             if ($descFile) {
@@ -223,6 +236,7 @@ Write-Host " X++ Build" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Models       : $($modelList -join ', ')"
 Write-Host "Compiler     : $xppcExe"
+Write-Host "Metadata     : $MetadataDir"
 Write-Host "Packages     : $PackagesDir"
 if ($Incremental) { Write-Host "Mode         : Incremental" }
 Write-Host ""
@@ -240,7 +254,7 @@ foreach ($model in $modelList) {
     Write-Host " Building: $model" -ForegroundColor Cyan
     Write-Host "----------------------------------------" -ForegroundColor Cyan
 
-    $outputDir = Join-Path $PackagesDir "$model\bin"
+    $outputDir = Join-Path $MetadataDir "$model\bin"
     $xmlLog    = Join-Path $tmpDir "build-$model.xml"
     $stdoutLog = Join-Path $tmpDir "build-$model-stdout.log"
     $stderrLog = Join-Path $tmpDir "build-$model-stderr.log"
@@ -256,11 +270,14 @@ foreach ($model in $modelList) {
     }
 
     # Build xppc arguments
+    # -metadata uses the source code path (where actual X++ metadata lives)
+    # -referenceFolder includes both MetadataDir (for locally-built modules) and PackagesDir (for platform binaries)
     $xppArgs = @(
-        "-metadata=$PackagesDir",
+        "-metadata=$MetadataDir",
         "-compilermetadata=$PackagesDir",
         "-modelmodule=$model",
         "-output=$outputDir",
+        "-referenceFolder=$MetadataDir",
         "-referenceFolder=$PackagesDir",
         "-xmllog=$xmlLog"
     )
