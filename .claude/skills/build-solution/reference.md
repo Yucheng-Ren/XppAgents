@@ -238,9 +238,28 @@ Check `.env.json` in the workspace root:
 
 If `sourceCodePath` differs from PackagesLocalDirectory, new files must be synced.
 
-### Post-Build: Copy Assemblies Back (if needed)
+### Post-Build Metadata Sync (Automatic)
 
-After building with the git overlay as metadata, the output assembly goes to `PackagesLocalDirectory\<Model>\bin\` (the `-output` path). The test runner and AOS use this path, so no extra copy is needed for assemblies.
+When `sourceCodePath` differs from `PackagesLocalDirectory`, the build script **automatically syncs** three folders from the source tree to PackagesLocalDirectory after each model's compilation:
+
+| Folder | Purpose |
+|--------|---------|
+| `bin/` | Compiled DLLs, netmodules, exports, cross-references |
+| `<Model>/` | Main metadata (AxForm, AxClass, AxTable, etc.) — needed for `formControlStr()` resolution |
+| `XppMetadata/` | Compiler-friendly metadata — needed for `FormAdaptorTypeProvider` and TypeProvider resolution |
+
+This sync is critical for **multi-model builds** where a downstream module (e.g., `MyModelTests`) depends on an upstream module (e.g., `MyModel`). Without syncing, the downstream compiler reads stale metadata from PackagesLocalDirectory and fails with errors like:
+
+- `Form control 'ControlName' is not found in 'FormName'` — `formControlStr()` can't resolve controls from stale main metadata
+- `The provided type 'FormAdaptor@[PurchCopilotGenUI]' does not have a method 'ControlName()'` — TypeProvider generates typed accessors from XppMetadata, which is stale
+- `The provided type 'FormAdaptor@[FormName]' does not have a method 'genUI.MethodName()'` — same: XppMetadata is missing controls/methods
+
+**Note:** XppMetadata is a **subset** of the main metadata — it strips code-behind (`<Source>` CDATA blocks) and keeps only declarative metadata. When new form controls are added to the main metadata XML, XppMetadata must be regenerated (normally done by Visual Studio/MSBuild, not xppc.exe). The sync ensures the latest XppMetadata from the source tree is available in PackagesLocalDirectory.
+
+If the sync step is missing or fails, manually copy the full model folder:
+```powershell
+robocopy "$MetadataDir\MyModel" "$PackagesDir\MyModel" /MIR /NJH /NJS /NFL /NDL /NP
+```
 
 ---
 
@@ -272,6 +291,14 @@ Check that the output directory `PackagesLocalDirectory\<Model>\bin\` exists and
 
 ### New class not found by xppc (classStr/tableStr errors)
 The file likely only exists in the git overlay but not in PackagesLocalDirectory. Copy the XML file to the matching path under PackagesLocalDirectory and rebuild. See "Git Overlay vs PackagesLocalDirectory" section above.
+
+### Test module build fails but main module build succeeds
+The most common cause is **stale metadata in PackagesLocalDirectory**. When the main module's form or class metadata changes, the test module's `formControlStr()` and `FormAdaptorTypeProvider` resolve against stale XppMetadata/main metadata in PackagesLocalDirectory. The fix:
+1. Build the main module first (the build script auto-sorts by dependency order)
+2. The post-build sync step copies updated metadata to PackagesLocalDirectory
+3. Then the test module can compile successfully
+
+If building modules individually, ensure the main module is built (and synced) before building the test module.
 
 ### Warnings vs Errors
 - **Fatal/Error** severity diagnostics cause build failure (exit code 1) and must be fixed

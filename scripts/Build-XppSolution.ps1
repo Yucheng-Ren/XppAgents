@@ -297,6 +297,63 @@ foreach ($model in $modelList) {
     $elapsed = [Math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
     $exitCode = $proc.ExitCode
 
+    # --- Sync metadata to PackagesLocalDirectory ---
+    # When MetadataDir differs from PackagesDir (separate source overlay), xppc outputs
+    # to MetadataDir but downstream modules resolve cross-module references (formControlStr,
+    # FormAdaptorTypeProvider, etc.) from PackagesDir. Sync the built model's artifacts so
+    # dependent modules can compile against the latest metadata and binaries.
+    if ($MetadataDir -ne $PackagesDir) {
+        $srcModelDir = Join-Path $MetadataDir $model
+        $pkgModelDir = Join-Path $PackagesDir $model
+
+        if ((Test-Path $srcModelDir) -and (Test-Path $pkgModelDir)) {
+            $syncErrors = 0
+
+            # 1. Sync bin output (compiled DLLs, netmodules, exports, cross-refs)
+            #    Use /E (not /MIR) to avoid deleting PKG files that may be locked by AOS.
+            #    Copy new/updated files only — locked files will be retried up to 3 times.
+            $srcBin = Join-Path $srcModelDir "bin"
+            $pkgBin = Join-Path $pkgModelDir "bin"
+            if (Test-Path $srcBin) {
+                if (-not (Test-Path $pkgBin)) { New-Item -ItemType Directory -Path $pkgBin -Force | Out-Null }
+                $roboOut = robocopy $srcBin $pkgBin /E /NJH /NJS /NP /R:3 /W:2 /XF *.delete 2>&1
+                $roboExit = $LASTEXITCODE
+                if ($roboExit -ge 8) {
+                    $syncErrors++
+                    $failedFiles = $roboOut | Where-Object { $_ -match 'ERROR \d+' }
+                    if ($failedFiles -and -not $Quiet) {
+                        Write-Host "  Warning: Some bin files could not be synced (locked by AOS?)" -ForegroundColor DarkYellow
+                        $failedFiles | Select-Object -First 3 | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkYellow }
+                    }
+                }
+            }
+
+            # 2. Sync main metadata (AxForm, AxClass, etc. — needed for formControlStr resolution)
+            $srcMeta = Join-Path $srcModelDir $model
+            $pkgMeta = Join-Path $pkgModelDir $model
+            if (Test-Path $srcMeta) {
+                if (-not (Test-Path $pkgMeta)) { New-Item -ItemType Directory -Path $pkgMeta -Force | Out-Null }
+                robocopy $srcMeta $pkgMeta /MIR /NJH /NJS /NFL /NDL /NP /R:3 /W:2 | Out-Null
+            }
+
+            # 3. Sync XppMetadata (compiler-friendly metadata used by TypeProviders)
+            $srcXppMeta = Join-Path $srcModelDir "XppMetadata"
+            $pkgXppMeta = Join-Path $pkgModelDir "XppMetadata"
+            if (Test-Path $srcXppMeta) {
+                if (-not (Test-Path $pkgXppMeta)) { New-Item -ItemType Directory -Path $pkgXppMeta -Force | Out-Null }
+                robocopy $srcXppMeta $pkgXppMeta /MIR /NJH /NJS /NFL /NDL /NP /R:3 /W:2 | Out-Null
+            }
+
+            if (-not $Quiet) {
+                if ($syncErrors -gt 0) {
+                    Write-Host "Synced $model to PackagesLocalDirectory (with $syncErrors sync warning(s) — locked files skipped)" -ForegroundColor DarkYellow
+                } else {
+                    Write-Host "Synced $model to PackagesLocalDirectory" -ForegroundColor DarkGray
+                }
+            }
+        }
+    }
+
     # Parse XML results
     $errors   = 0
     $warnings = 0
@@ -482,6 +539,13 @@ foreach ($model in $modelList) {
     }
 
     Write-Host ""
+}
+
+# Clean up GeneratedXppSource created by xppc.exe at the metadata root
+# xppc generates persister .xpp files for data entities here; they pollute the git overlay
+$genXppDir = Join-Path $MetadataDir "GeneratedXppSource"
+if (Test-Path $genXppDir) {
+    Remove-Item $genXppDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 #endregion
 
