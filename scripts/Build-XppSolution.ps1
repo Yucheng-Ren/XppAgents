@@ -290,6 +290,7 @@ foreach ($model in $modelList) {
 
     $proc = Start-Process -FilePath $xppcExe `
         -ArgumentList $xppArgs `
+        -WorkingDirectory $MetadataDir `
         -RedirectStandardOutput $stdoutLog `
         -RedirectStandardError  $stderrLog `
         -PassThru -NoNewWindow -Wait
@@ -546,6 +547,11 @@ foreach ($model in $modelList) {
 $genXppDir = Join-Path $MetadataDir "GeneratedXppSource"
 if (Test-Path $genXppDir) {
     Remove-Item $genXppDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+# Also clean from workspace root in case xppc ran with a different CWD
+$genXppDirCwd = Join-Path $PSScriptRoot ".." "Source" "Metadata" "GeneratedXppSource"
+if (Test-Path $genXppDirCwd) {
+    Remove-Item $genXppDirCwd -Recurse -Force -ErrorAction SilentlyContinue
 }
 #endregion
 
